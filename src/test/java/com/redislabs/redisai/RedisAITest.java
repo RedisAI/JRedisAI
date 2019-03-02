@@ -1,5 +1,8 @@
 package com.redislabs.redisai;
 
+import java.io.File;
+import java.net.URL;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,10 +24,35 @@ public class RedisAITest {
   }
   
   @Test
-  public void testSet() {
-    Assert.assertTrue(client.setTensor("source", new int[][] {{1,2},{3,4}}, new int[] {2,2}));
-    Assert.assertNotNull(client.getTensor("source"));
+  public void testSetTensor() {
+    Assert.assertTrue(client.setTensor("t1", new float[][] {{1,2},{3,4}}, new int[] {2,2}));
+//    client.getTensor("t1");
   }
 
+  @Test
+  public void testSetModel() {
+    ClassLoader classLoader = getClass().getClassLoader();
+    String model = classLoader.getResource("graph.pb").getFile();
+    Assert.assertTrue(client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model));
+//    client.getModel("model");
+  }
+  
+  @Test
+  public void testSeScript() {
+    ClassLoader classLoader = getClass().getClassLoader();
+    String script = classLoader.getResource("script.txt").getFile();
+    Assert.assertTrue(client.setScript("script", Device.CPU, script));
+//    client.getScript("script");
+  }
 
+  @Test
+  public void testRunModel() {
+    
+    ClassLoader classLoader = getClass().getClassLoader();
+    String model = classLoader.getResource("graph.pb").getFile();
+    client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model);
+    client.setTensor("input", new int[]{1}, new int[] {1});
+
+    Assert.assertTrue(client.runModel("model", new String[] {"input"}, new String[] {"target"}));
+  }
 }

@@ -12,6 +12,7 @@ import redis.clients.jedis.util.SafeEncoder;
 public enum DataType implements ProtocolCommand{
 
   INT32 {
+    @Override
     public List<byte[]> toByteArray(Object obj){
       int[] values = (int[])obj;
       List<byte[]> res = new ArrayList<>(values.length);
@@ -20,8 +21,15 @@ public enum DataType implements ProtocolCommand{
       }
       return res;
     }
+
+    @Override
+    protected Object toObject(List<byte[]> data) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }, 
   INT64 {
+    @Override
     public List<byte[]> toByteArray(Object obj){
       long[] values = (long[])obj;
       List<byte[]> res = new ArrayList<>(values.length);
@@ -30,8 +38,15 @@ public enum DataType implements ProtocolCommand{
       }
       return res;
     }
+
+    @Override
+    protected Object toObject(List<byte[]> data) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }, 
   FLOAT {
+    @Override
     public List<byte[]> toByteArray(Object obj){
       float[] values = (float[])obj;
       List<byte[]> res = new ArrayList<>(values.length);
@@ -40,8 +55,21 @@ public enum DataType implements ProtocolCommand{
       }
       return res;
     }
+
+    @Override
+    protected Object toObject(List<byte[]> data) {
+//      float[] values = (float[])obj;
+//      List<byte[]> res = new ArrayList<>(values.length);
+//      for(byte[] value : data) {
+//        res.add(Protocol.to(value));
+//      }
+//      return res;
+      // TODO Auto-generated method stub
+      return null;
+    }
   }, 
   DOUBLE {
+    @Override
     public List<byte[]> toByteArray(Object obj){
       double[] values = (double[])obj;
       List<byte[]> res = new ArrayList<>(values.length);
@@ -50,8 +78,15 @@ public enum DataType implements ProtocolCommand{
       }
       return res;
     }
+
+    @Override
+    protected Object toObject(List<byte[]> data) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }, 
   STRING {
+    @Override
     public List<byte[]> toByteArray(Object obj){
       byte[] values = (byte[])obj;
       List<byte[]> res = new ArrayList<>(values.length);
@@ -60,8 +95,15 @@ public enum DataType implements ProtocolCommand{
       }
       return res;
     }
+
+    @Override
+    protected Object toObject(List<byte[]> data) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }, 
   BOOL {
+    @Override
     public List<byte[]> toByteArray(Object obj){
       boolean[] values = (boolean[])obj;
       List<byte[]> res = new ArrayList<>(values.length);
@@ -69,6 +111,12 @@ public enum DataType implements ProtocolCommand{
         res.add(Protocol.toByteArray(value));
       }
       return res;
+    }
+
+    @Override
+    protected Object toObject(List<byte[]> data) {
+      // TODO Auto-generated method stub
+      return null;
     }
   };
 
@@ -95,6 +143,7 @@ public enum DataType implements ProtocolCommand{
   }
 
   protected abstract List<byte[]> toByteArray(Object obj);
+  protected abstract Object toObject(List<byte[]> data);
 
   public byte[] getRaw() {
     return raw;

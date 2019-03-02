@@ -1,7 +1,10 @@
 package com.redislabs.redisai;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.stream.Collectors;
 
 import redis.clients.jedis.BinaryClient;
 import redis.clients.jedis.Jedis;
@@ -20,7 +23,7 @@ public class RedisAI {
   }
   
   /**
-   * AI.SET TENSOR tensor_key data_type dim shape1..shapeN VALUES val1..valN
+   * AI.TENSORSET tensor_key data_type shape1 shape2 ... [BLOB data | VALUES val1 val2 ...]
    */
   public boolean setTensor(String key, Object tensor, int[] dimensions){
 
@@ -29,7 +32,6 @@ public class RedisAI {
     try (Jedis conn = getConnection()) {
 
       ArrayList<byte[]> args = new ArrayList<>();
-      args.add(Keyword.TENSOR.getRaw());
       args.add(SafeEncoder.encode(key));
       args.add(type.getRaw());
       for(int shape : dimensions) {
@@ -38,7 +40,7 @@ public class RedisAI {
       args.add(Keyword.VALUES.getRaw());
       args.addAll(type.toByteArray(tensor, dimensions));
       
-      return sendCommand(conn, Command.SET, args.toArray(new byte[args.size()][]))
+      return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
           .getStatusCodeReply().equals("OK");
       
     } catch(JedisDataException ex ) {
@@ -47,20 +49,86 @@ public class RedisAI {
   }
   
   /**
-   * AI.SET TENSOR tensor_key data_type dim shape1..shapeN VALUES val1..valN
+   * AI.MODELSET model_key backend device [INPUTS name1 name2 ... OUTPUTS name1 name2 ...] model_blob
    */
-  public Object getTensor(String key){
+  public boolean setModel(String key, Backend backend, Device devive, String[] inputs, String[] outputs, String modelPath){
 
     try (Jedis conn = getConnection()) {
-      List<Object> result = (List<Object>)sendCommand(conn, Command.GET, Keyword.TENSOR.getRaw(), SafeEncoder.encode(key), Keyword.VALUES.getRaw())
-          .getObjectMultiBulkReply();
+
+      ArrayList<byte[]> args = new ArrayList<>();
+      args.add(SafeEncoder.encode(key));
+      args.add(backend.getRaw());
+      args.add(devive.getRaw());
       
-      DataType type = DataType.valueOf((String)result.get(0));
+      args.add(Keyword.INPUTS.getRaw());
+      for(String input: inputs) {
+        args.add(SafeEncoder.encode(input));
+      }
       
-      return null;
+      args.add(Keyword.OUTPUTS.getRaw());
+      for(String output: outputs) {
+        args.add(SafeEncoder.encode(output));
+      }
       
+      args.add(Files.readAllBytes(Paths.get(modelPath)));
       
-    } catch(JedisDataException ex ) {
+      return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply().equals("OK");
+      
+    } catch(JedisDataException | IOException ex ) {
+      throw new RedisAIException(ex);
+    }
+  }
+  
+  /**
+   * AI.SCRIPTSET script_key device script_source
+   */
+  public boolean setScript(String key, Device devive, String scriptPath){
+
+    try (Jedis conn = getConnection()) {
+
+      ArrayList<byte[]> args = new ArrayList<>();
+      args.add(SafeEncoder.encode(key));
+      args.add(devive.getRaw());
+      
+      String script = Files.readAllLines(Paths.get(scriptPath))
+          .stream()
+          .collect(Collectors.joining());
+      
+      args.add(SafeEncoder.encode(script));
+      
+      return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply().equals("OK");
+      
+    } catch(JedisDataException | IOException ex ) {
+      throw new RedisAIException(ex);
+    }
+  }
+  
+  /**
+   * AI.MODELRUN model_key INPUTS input_key1 ... OUTPUTS output_key1 ...
+   */
+  public boolean runModel(String key, String[] inputs, String[] outputs){
+
+    try (Jedis conn = getConnection()) {
+
+      ArrayList<byte[]> args = new ArrayList<>();
+      args.add(SafeEncoder.encode(key));
+      
+      args.add(Keyword.INPUTS.getRaw());
+      for(String input: inputs) {
+        args.add(SafeEncoder.encode(input));
+      }
+      
+      args.add(Keyword.OUTPUTS.getRaw());
+      for(String output: outputs) {
+        args.add(SafeEncoder.encode(output));
+      }
+      
+      return sendCommand(conn, Command.MODEL_RUN, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply().equals("OK");
+      
+    } catch(JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
