@@ -1,6 +1,7 @@
 package com.redislabs.redisai;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -83,24 +84,37 @@ public class RedisAI {
   /**
    * AI.SCRIPTSET script_key device script_source
    */
-  public boolean setScript(String key, Device devive, String scriptPath){
+  public boolean setScriptFile(String key, Device device, String scriptFile){
+    try {
+      
+      String script = Files.readAllLines(Paths.get(scriptFile), StandardCharsets.UTF_8)
+          .stream()
+          .collect(Collectors.joining("\n")) + "\n";
+      
+      return setScript(key, device, script);
+      
+    } catch(IOException ex ) {
+      throw new RedisAIException(ex);
+    }
+  }
+  
+  /**
+   * AI.SCRIPTSET script_key device script_source
+   */
+  public boolean setScript(String key, Device device, String script){
 
     try (Jedis conn = getConnection()) {
 
       ArrayList<byte[]> args = new ArrayList<>();
       args.add(SafeEncoder.encode(key));
-      args.add(devive.getRaw());
-      
-      String script = Files.readAllLines(Paths.get(scriptPath))
-          .stream()
-          .collect(Collectors.joining());
+      args.add(device.getRaw());
       
       args.add(SafeEncoder.encode(script));
       
       return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
           .getStatusCodeReply().equals("OK");
       
-    } catch(JedisDataException | IOException ex ) {
+    } catch(JedisDataException ex ) {
       throw new RedisAIException(ex);
     }
   }
