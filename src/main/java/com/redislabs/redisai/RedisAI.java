@@ -133,6 +133,36 @@ public class RedisAI {
     }
   }
   
+
+  /**
+   * AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ...
+   */
+  public boolean runScript(String key, String[] inputs, String[] outputs) {
+
+    try (Jedis conn = getConnection()) {
+
+      ArrayList<byte[]> args = new ArrayList<>();
+      args.add(SafeEncoder.encode(key));
+      
+      args.add(Keyword.INPUTS.getRaw());
+      for(String input: inputs) {
+        args.add(SafeEncoder.encode(input));
+      }
+      
+      args.add(Keyword.OUTPUTS.getRaw());
+      for(String output: outputs) {
+        args.add(SafeEncoder.encode(output));
+      }
+      
+      return sendCommand(conn, Command.SCRIPT_RUN, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply().equals("OK");
+      
+    } catch(JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  
   private Jedis getConnection() {
     return pool.getResource();
   }

@@ -1,13 +1,8 @@
 package com.redislabs.redisai;
 
-import java.io.File;
-import java.net.URL;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -36,6 +31,17 @@ public class RedisAITest {
     Assert.assertTrue(client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model));
 //    client.getModel("model");
   }
+
+  @Test
+  public void testRunModel() {
+    ClassLoader classLoader = getClass().getClassLoader();
+    String model = classLoader.getResource("graph.pb").getFile();
+    client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model);
+    client.setTensor("input", new int[]{1}, new int[] {1});
+
+    Assert.assertTrue(client.runModel("model", new String[] {"input"}, new String[] {"target"}));
+  }
+  
   
   @Test
   public void testSeScript() {
@@ -44,15 +50,14 @@ public class RedisAITest {
     Assert.assertTrue(client.setScript("script", Device.CPU, script));
 //    client.getScript("script");
   }
-
+  
   @Test
-  public void testRunModel() {
-    
+  public void testRunScript() {
     ClassLoader classLoader = getClass().getClassLoader();
-    String model = classLoader.getResource("graph.pb").getFile();
-    client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model);
+    String script = classLoader.getResource("script.txt").getFile();
+    client.setScript("script", Device.CPU, script);
     client.setTensor("input", new int[]{1}, new int[] {1});
 
-    Assert.assertTrue(client.runModel("model", new String[] {"input"}, new String[] {"target"}));
+    Assert.assertTrue(client.runScript("model", new String[] {"input"}, new String[] {"target"}));
   }
 }
