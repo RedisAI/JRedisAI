@@ -32,15 +32,15 @@ public class RedisAITest {
 //    client.getModel("model");
   }
 
-  @Test
-  public void testRunModel() {
-    ClassLoader classLoader = getClass().getClassLoader();
-    String model = classLoader.getResource("graph.pb").getFile();
-    client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model);
-    client.setTensor("input", new int[]{1}, new int[] {1});
-
-    Assert.assertTrue(client.runModel("model", new String[] {"input"}, new String[] {"target"}));
-  }
+//  @Test
+//  public void testRunModel() {
+//    ClassLoader classLoader = getClass().getClassLoader();
+//    String model = classLoader.getResource("graph.pb").getFile();
+//    client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model);
+//    client.setTensor("input", new int[]{1}, new int[] {1});
+//
+//    Assert.assertTrue(client.runModel("model", new String[] {"input"}, new String[] {"target"}));
+//  }
 
   @Test
   public void testSeScriptFile() {
@@ -57,13 +57,13 @@ public class RedisAITest {
 //    client.getScript("script");
   }
   
-  @Test
-  public void testRunScript() {
-    ClassLoader classLoader = getClass().getClassLoader();
-    String script = classLoader.getResource("script.txt").getFile();
-    client.setScriptFile("script", Device.CPU, script);
-    client.setTensor("input", new int[]{1}, new int[] {1});
-
-    Assert.assertTrue(client.runScript("model", new String[] {"input"}, new String[] {"target"}));
-  }
+//  @Test
+//  public void testRunScript() {
+//    ClassLoader classLoader = getClass().getClassLoader();
+//    String script = classLoader.getResource("script.txt").getFile();
+//    client.setScriptFile("script", Device.CPU, script);
+//    client.setTensor("input", new int[]{1}, new int[] {1});
+//
+//    Assert.assertTrue(client.runScript("model", new String[] {"input"}, new String[] {"target"}));
+//  }
 }
