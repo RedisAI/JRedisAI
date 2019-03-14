@@ -32,15 +32,17 @@ public class RedisAITest {
 //    client.getModel("model");
   }
 
-//  @Test
-//  public void testRunModel() {
-//    ClassLoader classLoader = getClass().getClassLoader();
-//    String model = classLoader.getResource("graph.pb").getFile();
-//    client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model);
-//    client.setTensor("input", new int[]{1}, new int[] {1});
-//
-//    Assert.assertTrue(client.runModel("model", new String[] {"input"}, new String[] {"target"}));
-//  }
+  @Test
+  public void testRunModel() {
+    ClassLoader classLoader = getClass().getClassLoader();
+    String model = classLoader.getResource("graph.pb").getFile();
+    client.setModel("model", Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, model);
+    
+    client.setTensor("a", new float[] {2, 3}, new int[]{2});
+    client.setTensor("b", new float[] {2, 3}, new int[]{2});
+
+    Assert.assertTrue(client.runModel("model", new String[] {"a", "b"}, new String[] {"c"}));
+  }
 
   @Test
   public void testSeScriptFile() {
