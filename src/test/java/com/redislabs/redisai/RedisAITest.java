@@ -59,13 +59,15 @@ public class RedisAITest {
 //    client.getScript("script");
   }
   
-//  @Test
-//  public void testRunScript() {
-//    ClassLoader classLoader = getClass().getClassLoader();
-//    String script = classLoader.getResource("script.txt").getFile();
-//    client.setScriptFile("script", Device.CPU, script);
-//    client.setTensor("input", new int[]{1}, new int[] {1});
-//
-//    Assert.assertTrue(client.runScript("model", new String[] {"input"}, new String[] {"target"}));
-//  }
+  @Test
+  public void testRunScript() {
+    ClassLoader classLoader = getClass().getClassLoader();
+    String script = classLoader.getResource("script.txt").getFile();
+    client.setScriptFile("script", Device.CPU, script);
+    
+    client.setTensor("a1", new float[] {2, 3}, new int[]{2});
+    client.setTensor("b1", new float[] {2, 3}, new int[]{2});
+    
+    Assert.assertTrue(client.runScript("script", "bar", new String[] {"a1", "b1"}, new String[] {"c1"}));
+  }
 }
