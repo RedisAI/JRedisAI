@@ -46,6 +46,11 @@ and
 # Example: Using the Java Client
 
 ```java
-   Pool<Jedis> pool = ...
-   RedisAI rts = new RedisAI(pool);
+   RedisAI client = new RedisAI("localhost", 6379);
+   client.setModel("model", Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, "graph.pb");
+    
+   client.setTensor("a", new float[] {2, 3}, new int[]{2});
+   client.setTensor("b", new float[] {2, 3}, new int[]{2});
+
+   client.runModel("model", new String[] {"a", "b"}, new String[] {"c"});
 ```
