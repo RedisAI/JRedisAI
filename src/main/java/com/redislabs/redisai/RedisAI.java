@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import redis.clients.jedis.BinaryClient;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.Protocol;
 import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.util.Pool;
@@ -19,6 +21,50 @@ public class RedisAI {
  
   private final Pool<Jedis> pool;
   
+  /**
+   * Create a new RedisAI client with default connection to local host
+   */
+  public RedisAI() {
+    this("localhost", 6379);
+  }
+  
+  
+  /**
+   * Create a new RedisAI client  
+   *
+   * @param host      the redis host
+   * @param port      the redis pot
+   */
+  public RedisAI(String host, int port) {
+      this(host, port, 500, 100);
+  }
+  
+  /**
+   * Create a new RedisAI client
+   *
+   * @param host      the redis host
+   * @param port      the redis pot
+   */
+  public RedisAI(String host, int port, int timeout, int poolSize) {
+      this(host, port, timeout, poolSize, null);
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param host      the redis host
+   * @param port      the redis pot
+   * @param password  the password for authentication in a password protected Redis server
+   */
+  public RedisAI(String host, int port, int timeout, int poolSize, String password) {
+      this(new JedisPool(initPoolConfig(poolSize), host, port, timeout, password));
+  }
+  
+  /**
+   * Create a new RedisAI client
+   *
+   * @param pool      jedis connection pool
+   */
   public RedisAI(Pool<Jedis> pool) {
     this.pool = pool;
   }
@@ -187,4 +233,26 @@ public class RedisAI {
     client.sendCommand(command, args);
     return client;
   }
+  
+  /**
+   * Constructs JedisPoolConfig object.
+   *
+   * @param poolSize size of the JedisPool
+   * @return {@link JedisPoolConfig} object with a few default settings
+   */
+  private static JedisPoolConfig initPoolConfig(int poolSize) {
+      JedisPoolConfig conf = new JedisPoolConfig();
+      conf.setMaxTotal(poolSize);
+      conf.setTestOnBorrow(false);
+      conf.setTestOnReturn(false);
+      conf.setTestOnCreate(false);
+      conf.setTestWhileIdle(false);
+      conf.setMinEvictableIdleTimeMillis(60000);
+      conf.setTimeBetweenEvictionRunsMillis(30000);
+      conf.setNumTestsPerEvictionRun(-1);
+      conf.setFairness(true);
+
+      return conf;
+  }
+  
 }
