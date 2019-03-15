@@ -15,7 +15,7 @@ Java client for RedisAI
     <dependency>
       <groupId>com.redislabs</groupId>
       <artifactId>jredisai</artifactId>
-      <version>0.3.0</version>
+      <version>0.4.0</version>
     </dependency>
   </dependencies>
 ```
@@ -38,7 +38,7 @@ and
     <dependency>
       <groupId>com.redislabs</groupId>
       <artifactId>jRedisAI</artifactId>
-      <version>0.4.0-SNAPSHOT</version>
+      <version>0.5.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 ```
