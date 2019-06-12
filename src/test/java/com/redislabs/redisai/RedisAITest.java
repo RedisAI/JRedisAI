@@ -28,7 +28,7 @@ public class RedisAITest {
   public void testSetModel() {
     ClassLoader classLoader = getClass().getClassLoader();
     String model = classLoader.getResource("graph.pb").getFile();
-    Assert.assertTrue(client.setModel("model", Backend.TF, Device.CPU, new String[] {"input"}, new String[] {"target"}, model));
+    Assert.assertTrue(client.setModel("model", Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, model));
 //    client.getModel("model");
   }
 
