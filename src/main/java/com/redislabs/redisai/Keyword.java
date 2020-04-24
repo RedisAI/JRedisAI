@@ -5,7 +5,7 @@ import redis.clients.jedis.util.SafeEncoder;
 
 public enum Keyword implements ProtocolCommand{
 
-    TENSOR, VALUES, INPUTS, OUTPUTS;
+    TENSOR, VALUES, INPUTS, OUTPUTS, BLOB, SOURCE;
     
     private final byte[] raw;
 

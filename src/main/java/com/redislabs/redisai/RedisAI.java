@@ -116,7 +116,7 @@ public class RedisAI {
       for(String output: outputs) {
         args.add(SafeEncoder.encode(output));
       }
-      
+      args.add(Keyword.BLOB.getRaw());
       args.add(Files.readAllBytes(Paths.get(modelPath)));
       
       return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
@@ -155,6 +155,7 @@ public class RedisAI {
       args.add(SafeEncoder.encode(key));
       args.add(device.getRaw());
       
+      args.add(Keyword.SOURCE.getRaw());
       args.add(SafeEncoder.encode(script));
       
       return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
