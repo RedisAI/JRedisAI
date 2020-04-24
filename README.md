@@ -7,6 +7,9 @@
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/RedisAI/JRedisAI.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RedisAI/JRedisAI/context:java)
 
 # JRedisAI
+[![Forum](https://img.shields.io/badge/Forum-RedisAI-blue)](https://forum.redislabs.com/c/modules/redisai)
+[![Gitter](https://badges.gitter.im/RedisLabs/RedisAI.svg)](https://gitter.im/RedisLabs/RedisAI?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 Java client for RedisAI
 
 ### Official Releases
