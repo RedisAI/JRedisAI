@@ -115,26 +115,31 @@ public class RedisAI {
       Tensor tensor = null;
       for (int i = 0; i < reply.size(); i+=2) {
         String arrayKey = SafeEncoder.encode((byte[]) reply.get(i));
-        if (arrayKey.equals("dtype")){
-          String dtypeString = SafeEncoder.encode((byte[]) reply.get(i+1));
-          dtype = DataType.getDataTypefromString(dtypeString);
-          if (dtype==null){
-            throw new JRedisAIRunTimeException("Unrecognized datatype: "+dtypeString);
-          }
-        }
-        if (arrayKey.equals("shape")){
-          List<Long> shapeResp = (List<Long>)reply.get(i+1);
-          shape = new long[shapeResp.size()];
-          for (int j = 0; j < shapeResp.size(); j++) {
-            shape[j] = shapeResp.get(j);
-          }
-        }
-        if (arrayKey.equals("values")){
-          if (dtype==null){
-            throw new JRedisAIRunTimeException("Trying to decode values array without previous datatype info");
-          }
-          List<byte[]> valuesEncoded = (List<byte[]>) reply.get(i+1);
-          values = dtype.toObject(valuesEncoded);
+        switch(arrayKey)
+        {
+          case "dtype":
+            String dtypeString = SafeEncoder.encode((byte[]) reply.get(i+1));
+            dtype = DataType.getDataTypefromString(dtypeString);
+            if (dtype==null){
+              throw new JRedisAIRunTimeException("Unrecognized datatype: "+dtypeString);
+            }
+            break;
+          case "shape":
+            List<Long> shapeResp = (List<Long>)reply.get(i+1);
+            shape = new long[shapeResp.size()];
+            for (int j = 0; j < shapeResp.size(); j++) {
+              shape[j] = shapeResp.get(j);
+            }
+            break;
+          case "values":
+            if (dtype==null){
+              throw new JRedisAIRunTimeException("Trying to decode values array without previous datatype info");
+            }
+            List<byte[]> valuesEncoded = (List<byte[]>) reply.get(i+1);
+            values = dtype.toObject(valuesEncoded);
+            break;
+          default:
+            break;
         }
       }
       if (dtype!=null && shape!=null && values!=null){
