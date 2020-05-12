@@ -39,9 +39,14 @@ public class RedisAITest {
     client.setModel("model", Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, model);
     
     client.setTensor("a", new float[] {2, 3}, new int[]{2});
-    client.setTensor("b", new float[] {2, 3}, new int[]{2});
+    client.setTensor("b", new float[] {3, 5}, new int[]{2});
 
     Assert.assertTrue(client.runModel("model", new String[] {"a", "b"}, new String[] {"c"}));
+    Tensor tensor = client.getTensor("c");
+    float[] values = (float[]) tensor.getValues();
+    float[] expected =  new float[] {6, 15};
+    Assert.assertTrue("Assert same shape of values", values.length==2);
+    Assert.assertArrayEquals(values,expected, (float) 0.1);
   }
 
   @Test
@@ -69,5 +74,15 @@ public class RedisAITest {
     client.setTensor("b1", new float[] {2, 3}, new int[]{2});
     
     Assert.assertTrue(client.runScript("script", "bar", new String[] {"a1", "b1"}, new String[] {"c1"}));
+  }
+
+  @Test
+  public void testGetTensor() {
+    Assert.assertTrue(client.setTensor("t1", new float[][] {{1,2},{3,4}}, new int[] {2,2}));
+    Tensor tensor = client.getTensor("t1");
+    float[] values = (float[]) tensor.getValues();
+    Assert.assertTrue("Assert same shape of values", values.length==4);
+    float[] expected =  new float[] {1,2,3,4};
+    Assert.assertArrayEquals(values,expected, (float) 0.1);
   }
 }

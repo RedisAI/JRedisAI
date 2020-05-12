@@ -5,8 +5,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
+import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import redis.clients.jedis.BinaryClient;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -94,7 +96,60 @@ public class RedisAI {
       throw new RedisAIException(ex);
     }
   }
-  
+
+  /**
+   * TS.GET key
+   *
+   * @param key
+   * @return Tensor
+   */
+  public Tensor getTensor(String key) throws JRedisAIRunTimeException {
+    try (Jedis conn = getConnection()) {
+      List<?> reply = sendCommand(conn, Command.TENSOR_GET, SafeEncoder.encode(key), Keyword.META.getRaw(), Keyword.VALUES.getRaw() ).getObjectMultiBulkReply();
+      if(reply.isEmpty()) {
+        return null;
+      }
+      DataType dtype = null;
+      long[] shape = null;
+      Object values = null;
+      Tensor tensor = null;
+      for (int i = 0; i < reply.size(); i+=2) {
+        String arrayKey = SafeEncoder.encode((byte[]) reply.get(i));
+        switch(arrayKey)
+        {
+          case "dtype":
+            String dtypeString = SafeEncoder.encode((byte[]) reply.get(i+1));
+            dtype = DataType.getDataTypefromString(dtypeString);
+            if (dtype==null){
+              throw new JRedisAIRunTimeException("Unrecognized datatype: "+dtypeString);
+            }
+            break;
+          case "shape":
+            List<Long> shapeResp = (List<Long>)reply.get(i+1);
+            shape = new long[shapeResp.size()];
+            for (int j = 0; j < shapeResp.size(); j++) {
+              shape[j] = shapeResp.get(j);
+            }
+            break;
+          case "values":
+            if (dtype==null){
+              throw new JRedisAIRunTimeException("Trying to decode values array without previous datatype info");
+            }
+            List<byte[]> valuesEncoded = (List<byte[]>) reply.get(i+1);
+            values = dtype.toObject(valuesEncoded);
+            break;
+          default:
+            break;
+        }
+      }
+      if (dtype!=null && shape!=null && values!=null){
+        tensor = new Tensor(dtype,shape,values);
+      }
+      return tensor;
+    }
+
+  }
+
   /**
    * AI.MODELSET model_key backend device [INPUTS name1 name2 ... OUTPUTS name1 name2 ...] model_blob
    */

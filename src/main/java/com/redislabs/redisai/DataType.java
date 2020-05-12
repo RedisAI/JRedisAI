@@ -24,8 +24,11 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      // TODO Auto-generated method stub
-      return null;
+      int [] values = new int[data.size()];
+      for (int i = 0; i < data.size(); i++) {
+        values[i] = Integer.parseInt(SafeEncoder.encode(data.get(i)));
+      }
+      return values;
     }
   }, 
   INT64 {
@@ -41,8 +44,11 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      // TODO Auto-generated method stub
-      return null;
+      long [] values = new long[data.size()];
+      for (int i = 0; i < data.size(); i++) {
+        values[i] = Long.parseLong(SafeEncoder.encode(data.get(i)));
+      }
+      return values;
     }
   }, 
   FLOAT {
@@ -58,14 +64,11 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-//      float[] values = (float[])obj;
-//      List<byte[]> res = new ArrayList<>(values.length);
-//      for(byte[] value : data) {
-//        res.add(Protocol.to(value));
-//      }
-//      return res;
-      // TODO Auto-generated method stub
-      return null;
+      float [] values = new float[data.size()];
+      for (int i = 0; i < data.size(); i++) {
+        values[i] = Float.parseFloat(SafeEncoder.encode(data.get(i)));
+      }
+      return values;
     }
   }, 
   DOUBLE {
@@ -81,8 +84,11 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      // TODO Auto-generated method stub
-      return null;
+      double [] values = new double[data.size()];
+      for (int i = 0; i < data.size(); i++) {
+        values[i] = Double.parseDouble(SafeEncoder.encode(data.get(i)));
+      }
+      return values;
     }
   }, 
   STRING {
@@ -98,8 +104,7 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      // TODO Auto-generated method stub
-      return null;
+      return data;
     }
   }, 
   BOOL {
@@ -140,6 +145,23 @@ public enum DataType implements ProtocolCommand{
 
   DataType() {
     raw = SafeEncoder.encode(this.name());
+  }
+
+  static DataType getDataTypefromString(String dtypeRaw) {
+    DataType dt = null;
+    if (dtypeRaw.equals(DataType.INT32.name())){
+      dt=DataType.INT32;
+    }
+    if (dtypeRaw.equals(DataType.INT64.name())){
+      dt=DataType.INT64;
+    }
+    if (dtypeRaw.equals(DataType.FLOAT.name())){
+      dt=DataType.FLOAT;
+    }
+    if (dtypeRaw.equals(DataType.DOUBLE.name())){
+      dt=DataType.DOUBLE;
+    }
+    return dt;
   }
 
   protected abstract List<byte[]> toByteArray(Object obj);
