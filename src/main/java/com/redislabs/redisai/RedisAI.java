@@ -4,9 +4,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import redis.clients.jedis.BinaryClient;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -15,6 +16,8 @@ import redis.clients.jedis.Protocol;
 import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.util.Pool;
 import redis.clients.jedis.util.SafeEncoder;
+
+import javax.xml.crypto.Data;
 
 public class RedisAI {
 
@@ -94,7 +97,38 @@ public class RedisAI {
       throw new RedisAIException(ex);
     }
   }
-  
+
+  /**
+   * TS.GET key
+   *
+   * @param key
+   * @return Tensor
+   */
+  public Tensor getTensor(String key) throws JRedisAIRunTimeException {
+    try (Jedis conn = getConnection()) {
+      List<?> reply = sendCommand(conn, Command.TENSOR_GET, SafeEncoder.encode(key), Keyword.META.getRaw(), Keyword.VALUES.getRaw() ).getObjectMultiBulkReply();
+      if(reply.isEmpty()) {
+        return null;
+      }
+      if (reply.size() <6){
+        throw new JRedisAIRunTimeException("Expected a minimum Array Reply of size 6");
+      }
+      String dtypeString = SafeEncoder.encode((byte[]) reply.get(1));
+      DataType dtype = DataType.getDataTypefromString(dtypeString);
+      if (dtype==null){
+        throw new JRedisAIRunTimeException("Unrecognized datatype: "+dtypeString);
+      }
+      List<Long> shapeResp = (List<Long>)reply.get(3);
+      long[] shape = new long[shapeResp.size()];
+      for (int i = 0; i < shapeResp.size(); i++) {
+        shape[i] = shapeResp.get(i);
+      }
+      List<byte[]> valuesEncoded = (List<byte[]>) reply.get(5);
+      Object values = dtype.toObject(valuesEncoded);
+      return new Tensor(dtype,shape,values);
+    }
+  }
+
   /**
    * AI.MODELSET model_key backend device [INPUTS name1 name2 ... OUTPUTS name1 name2 ...] model_blob
    */
