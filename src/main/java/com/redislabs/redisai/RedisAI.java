@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
@@ -16,8 +17,6 @@ import redis.clients.jedis.Protocol;
 import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.util.Pool;
 import redis.clients.jedis.util.SafeEncoder;
-
-import javax.xml.crypto.Data;
 
 public class RedisAI {
 
@@ -110,23 +109,40 @@ public class RedisAI {
       if(reply.isEmpty()) {
         return null;
       }
-      if (reply.size() <6){
-        throw new JRedisAIRunTimeException("Expected a minimum Array Reply of size 6");
+      DataType dtype = null;
+      long[] shape = null;
+      Object values = null;
+      Tensor tensor = null;
+      for (int i = 0; i < reply.size(); i+=2) {
+        String arrayKey = SafeEncoder.encode((byte[]) reply.get(i));
+        if (arrayKey.equals("dtype")){
+          String dtypeString = SafeEncoder.encode((byte[]) reply.get(i+1));
+          dtype = DataType.getDataTypefromString(dtypeString);
+          if (dtype==null){
+            throw new JRedisAIRunTimeException("Unrecognized datatype: "+dtypeString);
+          }
+        }
+        if (arrayKey.equals("shape")){
+          List<Long> shapeResp = (List<Long>)reply.get(i+1);
+          shape = new long[shapeResp.size()];
+          for (int j = 0; j < shapeResp.size(); j++) {
+            shape[j] = shapeResp.get(j);
+          }
+        }
+        if (arrayKey.equals("values")){
+          if (dtype==null){
+            throw new JRedisAIRunTimeException("Trying to decode values array without previous datatype info");
+          }
+          List<byte[]> valuesEncoded = (List<byte[]>) reply.get(i+1);
+          values = dtype.toObject(valuesEncoded);
+        }
       }
-      String dtypeString = SafeEncoder.encode((byte[]) reply.get(1));
-      DataType dtype = DataType.getDataTypefromString(dtypeString);
-      if (dtype==null){
-        throw new JRedisAIRunTimeException("Unrecognized datatype: "+dtypeString);
+      if (dtype!=null && shape!=null && values!=null){
+        tensor = new Tensor(dtype,shape,values);
       }
-      List<Long> shapeResp = (List<Long>)reply.get(3);
-      long[] shape = new long[shapeResp.size()];
-      for (int i = 0; i < shapeResp.size(); i++) {
-        shape[i] = shapeResp.get(i);
-      }
-      List<byte[]> valuesEncoded = (List<byte[]>) reply.get(5);
-      Object values = dtype.toObject(valuesEncoded);
-      return new Tensor(dtype,shape,values);
+      return tensor;
     }
+
   }
 
   /**
