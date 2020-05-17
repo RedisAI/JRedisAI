@@ -6,6 +6,8 @@ import org.junit.Test;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import java.util.Map;
+
 public class RedisAITest {
 
   private final JedisPool pool = new JedisPool();
@@ -84,5 +86,49 @@ public class RedisAITest {
     Assert.assertTrue("Assert same shape of values", values.length==4);
     float[] expected =  new float[] {1,2,3,4};
     Assert.assertArrayEquals(values,expected, (float) 0.1);
+  }
+
+  @Test
+  public void testInfo() {
+    String key = "test:info:script";
+    String script = "def bar(a, b):\n" +
+            "    return a + b\n";
+    Assert.assertTrue(client.setScript(key, Device.CPU, script));
+
+    // not exist
+    Map<String, Object> infoMap = null;
+    try {
+      infoMap = client.getInfo("not:exist");
+      Assert.fail("Should throw RedisAIException");
+    } catch (RedisAIException e) {
+      // ERR cannot find run info for key
+    }
+
+    // first inited info
+    infoMap = client.getInfo(key);
+    Assert.assertNotNull(infoMap);
+    Assert.assertEquals(key, infoMap.get("key"));
+    Assert.assertEquals(Device.CPU.name(), infoMap.get("device"));
+    Assert.assertEquals(0L, infoMap.get("calls"));
+
+    client.setTensor("a1", new float[] {2, 3}, new int[]{2});
+    client.setTensor("b1", new float[] {2, 3}, new int[]{2});
+    Assert.assertTrue(client.runScript(key, "bar", new String[] {"a1", "b1"}, new String[] {"c1"}));
+
+    // one model runs
+    infoMap = client.getInfo(key);
+    Assert.assertEquals(1L, infoMap.get("calls"));
+
+    // reset
+    Assert.assertTrue(client.resetStat(key));
+    infoMap = client.getInfo(key);
+    Assert.assertEquals(0L, infoMap.get("calls"));
+
+    try {
+      client.resetStat("not:exist");
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      // ERR cannot find run info for key
+    }
   }
 }
