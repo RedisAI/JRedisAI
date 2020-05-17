@@ -282,10 +282,10 @@ public class RedisAI {
   }
 
   /**
-   * AI.INFO <key>
+   * AI.INFO <key> [RESETSTAT]
    *
    * @param key the key name of a model or script
-   * @return
+   * @return a map of attributes for the given model or script  
    */
   public Map<String, Object> getInfo(String key) {
     try (Jedis conn = getConnection()) {
