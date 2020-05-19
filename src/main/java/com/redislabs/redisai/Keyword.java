@@ -3,10 +3,10 @@ package com.redislabs.redisai;
 import redis.clients.jedis.commands.ProtocolCommand;
 import redis.clients.jedis.util.SafeEncoder;
 
-public enum Keyword implements ProtocolCommand{
+public enum Keyword implements ProtocolCommand {
 
     TENSOR, INPUTS, OUTPUTS, META, VALUES, BLOB, SOURCE, RESETSTAT;
-    
+
     private final byte[] raw;
 
     Keyword() {
