@@ -26,7 +26,13 @@ public class RedisAITest {
     @Test
     public void testSetTensor() {
         Assert.assertTrue(client.setTensor("t1", new float[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
-//    client.getTensor("t1");
+        Tensor t1 = new Tensor(DataType.FLOAT,new long[]{2, 2},new float[][]{{1, 2}, {3, 4}});
+        Assert.assertTrue(client.setTensor("t2", t1));
+        Tensor t2 = client.getTensor("t2");
+        Assert.assertEquals(t1.getDataType(),t2.getDataType());
+        Assert.assertArrayEquals(t1.getShape(),t2.getShape());
+        Assert.assertArrayEquals(new float[][]{{1, 2}, {3, 4}}, (float[][]) t1.getValues());
+        Assert.assertArrayEquals(new float[]{1, 2,3, 4}, (float[]) t2.getValues(),(float)0.1);
     }
 
     @Test
@@ -97,14 +103,14 @@ public class RedisAITest {
     }
 
     @Test
-    public void testSeScriptFile() {
+    public void testSetScriptFile() {
         ClassLoader classLoader = getClass().getClassLoader();
         String scriptFile = classLoader.getResource("test_data/script.txt").getFile();
         Assert.assertTrue(client.setScriptFile("script", Device.CPU, scriptFile));
     }
 
     @Test
-    public void testSeScript() {
+    public void testSetScript() {
         String script = "def bar(a, b):\n" +
                 "    return a + b\n";
         Assert.assertTrue(client.setScript("script", Device.CPU, script));
@@ -217,4 +223,6 @@ public class RedisAITest {
         Assert.assertEquals(script1.getTag(), script2.getTag());
         Assert.assertEquals(script1.getSource(), script2.getSource());
     }
+
+
 }
