@@ -5,7 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
@@ -279,6 +281,45 @@ public class RedisAI {
     }
   }
 
+  /**
+   * AI.INFO <key> [RESETSTAT]
+   *
+   * @param key the key name of a model or script
+   * @return a map of attributes for the given model or script  
+   */
+  public Map<String, Object> getInfo(String key) {
+    try (Jedis conn = getConnection()) {
+      List<Object> values = sendCommand(conn, Command.INFO, SafeEncoder.encode(key)).getObjectMultiBulkReply();
+
+      Map<String, Object> infoMap = new HashMap<>(values.size());
+      for (int i = 0; i < values.size(); i += 2) {
+        Object val = values.get(i + 1);
+        if (val instanceof byte[]) {
+          val = SafeEncoder.encode((byte[]) val);
+        }
+        infoMap.put(SafeEncoder.encode((byte[]) values.get(i)), val);
+      }
+      return infoMap;
+    } catch(JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * AI.INFO <key> RESETSTAT
+   * resets all statistics associated with the key
+   *
+   * @param key the key name of a model or script
+   * @return
+   */
+  public boolean resetStat(String key) {
+    try (Jedis conn = getConnection()) {
+      return sendCommand(conn, Command.INFO, SafeEncoder.encode(key), Keyword.RESETSTAT.getRaw())
+              .getStatusCodeReply().equals("OK");
+    } catch(JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
   
   private Jedis getConnection() {
     return pool.getResource();

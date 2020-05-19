@@ -12,7 +12,8 @@ public enum Command implements ProtocolCommand{
     MODEL_RUN("AI.MODELRUN"),
     SCRIPT_GET("AI.SCRIPTGET"),
     SCRIPT_SET("AI.SCRIPTSET"),
-    SCRIPT_RUN("AI.SCRIPTRUN");
+    SCRIPT_RUN("AI.SCRIPTRUN"),
+    INFO("AI.INFO");
 
     
     private final byte[] raw;
