@@ -15,6 +15,10 @@ public class RedisAITest {
 
     private final JedisPool pool = new JedisPool();
     private final RedisAI client = new RedisAI(pool);
+    private final RedisAI client_default_connection = new RedisAI();
+    private final RedisAI client_host_port = new RedisAI("localhost", 6379);
+    private final RedisAI client_poolsize = new RedisAI("localhost", 6379, 30000, 1);
+    private final RedisAI client_password = new RedisAI("localhost", 6379, 30000, 1, "");
 
     @Before
     public void testClient() {
@@ -24,15 +28,54 @@ public class RedisAITest {
     }
 
     @Test
-    public void testSetTensor() {
+    public void testSetTensorNegative() {
+        try {
+            client.setTensor("t1", new float[]{1, 2}, new int[]{1});
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            Assert.assertEquals("redis.clients.jedis.exceptions.JedisDataException: ERR wrong number of arguments for 'AI.TENSORSET' command", e.getMessage());
+        }
+
+        try {
+            Tensor t1 = new Tensor(DataType.FLOAT, new long[]{1}, new float[]{1, 2});
+            client.setTensor("t1", t1);
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            Assert.assertEquals("redis.clients.jedis.exceptions.JedisDataException: ERR wrong number of arguments for 'AI.TENSORSET' command", e.getMessage());
+        }
+    }
+
+    @Test
+    public void testSetTensorFLOAT() {
         Assert.assertTrue(client.setTensor("t1", new float[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
-        Tensor t1 = new Tensor(DataType.FLOAT,new long[]{2, 2},new float[][]{{1, 2}, {3, 4}});
+        Tensor t1 = new Tensor(DataType.FLOAT, new long[]{2, 2}, new float[][]{{1, 2}, {3, 4}});
         Assert.assertTrue(client.setTensor("t2", t1));
         Tensor t2 = client.getTensor("t2");
-        Assert.assertEquals(t1.getDataType(),t2.getDataType());
-        Assert.assertArrayEquals(t1.getShape(),t2.getShape());
+        Assert.assertEquals(t1.getDataType(), t2.getDataType());
+        Assert.assertArrayEquals(t1.getShape(), t2.getShape());
         Assert.assertArrayEquals(new float[][]{{1, 2}, {3, 4}}, (float[][]) t1.getValues());
-        Assert.assertArrayEquals(new float[]{1, 2,3, 4}, (float[]) t2.getValues(),(float)0.1);
+        Assert.assertArrayEquals(new float[]{1, 2, 3, 4}, (float[]) t2.getValues(), (float) 0.1);
+    }
+
+    @Test
+    public void testSetTensorDOUBLE() {
+        Assert.assertTrue(client.setTensor("t1", new double[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
+        Tensor t1 = new Tensor(DataType.DOUBLE, new long[]{2, 2}, new double[][]{{1, 2}, {3, 4}});
+        Assert.assertTrue(client.setTensor("t2", t1));
+    }
+
+    @Test
+    public void testSetTensorINT32() {
+        Assert.assertTrue(client.setTensor("t1", new int[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
+        Tensor t1 = new Tensor(DataType.INT32, new long[]{2, 2}, new int[][]{{1, 2}, {3, 4}});
+        Assert.assertTrue(client.setTensor("t2", t1));
+    }
+
+    @Test
+    public void testSetTensorINT64() {
+        Assert.assertTrue(client.setTensor("t1", new long[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
+        Tensor t1 = new Tensor(DataType.INT64, new long[]{2, 2}, new long[][]{{1, 2}, {3, 4}});
+        Assert.assertTrue(client.setTensor("t2", t1));
     }
 
     @Test
@@ -43,6 +86,27 @@ public class RedisAITest {
         Model m1 = client.getModel("model");
         Assert.assertEquals(Device.CPU, m1.getDevice());
         Assert.assertEquals(Backend.TF, m1.getBackend());
+    }
+
+    @Test
+    public void testSetModelNegative() {
+        // Wrong backend for the specified model
+        try {
+            ClassLoader classLoader = getClass().getClassLoader();
+            String model = classLoader.getResource("test_data/graph.pb").getFile();
+            client.setModel("model", Backend.ONNX, Device.CPU, new String[0], new String[0], model);
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            Assert.assertEquals("redis.clients.jedis.exceptions.JedisDataException: No graph was found in the protobuf.", e.getMessage());
+        }
+
+        try {
+            Model m1 = new Model(Backend.ONNX, Device.CPU, new String[0], new String[0], new byte[0]);
+            client.setModel("m1", m1);
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            Assert.assertEquals("redis.clients.jedis.exceptions.JedisDataException: No graph was found in the protobuf.", e.getMessage());
+        }
     }
 
     @Test
@@ -103,6 +167,16 @@ public class RedisAITest {
     }
 
     @Test
+    public void testRunModelNegative() {
+        try {
+            client.runModel("dont:exist", new String[]{"a", "b"}, new String[]{"c"});
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            Assert.assertEquals("redis.clients.jedis.exceptions.JedisDataException: ERR model key is empty", e.getMessage());
+        }
+    }
+
+    @Test
     public void testSetScriptFile() {
         ClassLoader classLoader = getClass().getClassLoader();
         String scriptFile = classLoader.getResource("test_data/script.txt").getFile();
@@ -118,6 +192,26 @@ public class RedisAITest {
     }
 
     @Test
+    public void testSetScriptNegative() {
+        try {
+            ClassLoader classLoader = getClass().getClassLoader();
+            Script script = new Script(Device.CPU, "bad function -----");
+            client.setScript("script.error1", script);
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            // long error message
+        }
+
+        try {
+            ClassLoader classLoader = getClass().getClassLoader();
+            client.setScript("script.error1", Device.CPU, "bad function -----");
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            // long error message
+        }
+    }
+
+    @Test
     public void testRunScript() {
         ClassLoader classLoader = getClass().getClassLoader();
         String script = classLoader.getResource("test_data/script.txt").getFile();
@@ -127,6 +221,16 @@ public class RedisAITest {
         client.setTensor("b1", new float[]{2, 3}, new int[]{2});
 
         Assert.assertTrue(client.runScript("script", "bar", new String[]{"a1", "b1"}, new String[]{"c1"}));
+    }
+
+    @Test
+    public void testRunScriptNegative() {
+        try {
+            client.runScript("dont:exist", "bar", new String[]{"a1", "b1"}, new String[]{"c1"});
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            Assert.assertEquals("redis.clients.jedis.exceptions.JedisDataException: ERR script key is empty", e.getMessage());
+        }
     }
 
     @Test

@@ -16,12 +16,17 @@ public class ModelTest {
     }
 
     @Test
-    public void getBlob() {
+    public void getSetBlob() {
+        byte[] expected = new byte[0];
+        Model model = new Model(Backend.ONNX, Device.GPU, new String[0], new String[0], expected);
+        byte[] blob = model.getBlob();
+        Assert.assertEquals(blob, expected);
+        byte[] expected2 = new byte[]{0x10};
+        model.setBlob(expected2);
+        blob = model.getBlob();
+        Assert.assertEquals(blob, expected2);
     }
 
-    @Test
-    public void setBlob() {
-    }
 
     @Test
     public void getSetOutputs() {

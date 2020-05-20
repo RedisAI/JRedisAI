@@ -52,7 +52,7 @@ public class Model {
                 case "device":
                     String deviceString = SafeEncoder.encode((byte[]) reply.get(i + 1));
                     device = Device.valueOf(deviceString);
-                    if (backend == null) {
+                    if (device == null) {
                         throw new JRedisAIRunTimeException("Unrecognized device: " + deviceString);
                     }
                     break;
