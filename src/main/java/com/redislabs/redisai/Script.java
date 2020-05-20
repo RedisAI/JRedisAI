@@ -117,8 +117,8 @@ public class Script {
      * @param key name of key to store the Script
      * @return
      */
-    protected ArrayList<byte[]> getScriptSetCommandBytes(String key) {
-        ArrayList<byte[]> args = new ArrayList<>();
+    protected List<byte[]> getScriptSetCommandBytes(String key) {
+        List<byte[]> args = new ArrayList<>();
         args.add(SafeEncoder.encode(key));
         args.add(device.getRaw());
         args.add(Keyword.SOURCE.getRaw());

@@ -107,7 +107,7 @@ public class RedisAI {
                 shapeL[i] = shape[i];
             }
             Tensor tensor = new Tensor(dataType, shapeL, values);
-            ArrayList<byte[]> args = tensor.getTensorSetCommandBytes(key);
+            List<byte[]> args = tensor.getTensorSetCommandBytes(key);
             return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
                     .getStatusCodeReply().equals("OK");
 
@@ -125,7 +125,7 @@ public class RedisAI {
      */
     public boolean setTensor(String key, Tensor tensor) {
         try (Jedis conn = getConnection()) {
-            ArrayList<byte[]> args = tensor.getTensorSetCommandBytes(key);
+            List<byte[]> args = tensor.getTensorSetCommandBytes(key);
             return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
                     .getStatusCodeReply().equals("OK");
 
@@ -166,7 +166,7 @@ public class RedisAI {
         try (Jedis conn = getConnection()) {
             byte[] blob = Files.readAllBytes(Paths.get(modelPath));
             Model model = new Model(backend, device, inputs, outputs, blob);
-            ArrayList<byte[]> args = model.getModelSetCommandBytes(key);
+            List<byte[]> args = model.getModelSetCommandBytes(key);
             return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
                     .getStatusCodeReply().equals("OK");
 
@@ -185,7 +185,7 @@ public class RedisAI {
     public boolean setModel(String key, Model model) {
 
         try (Jedis conn = getConnection()) {
-            ArrayList<byte[]> args = model.getModelSetCommandBytes(key);
+            List<byte[]> args = model.getModelSetCommandBytes(key);
             return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
                     .getStatusCodeReply().equals("OK");
         } catch (JedisDataException ex) {
@@ -255,7 +255,7 @@ public class RedisAI {
     public boolean setScript(String key, Device device, String source) {
         try (Jedis conn = getConnection()) {
             Script script = new Script(device, source);
-            ArrayList<byte[]> args = script.getScriptSetCommandBytes(key);
+            List<byte[]> args = script.getScriptSetCommandBytes(key);
             return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
                     .getStatusCodeReply().equals("OK");
 
@@ -273,7 +273,7 @@ public class RedisAI {
      */
     public boolean setScript(String key, Script script) {
         try (Jedis conn = getConnection()) {
-            ArrayList<byte[]> args = script.getScriptSetCommandBytes(key);
+            List<byte[]> args = script.getScriptSetCommandBytes(key);
             return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
                     .getStatusCodeReply().equals("OK");
 
@@ -321,7 +321,7 @@ public class RedisAI {
 
         try (Jedis conn = getConnection()) {
 
-            ArrayList<byte[]> args = new ArrayList<>();
+            List<byte[]> args = new ArrayList<>();
             args.add(SafeEncoder.encode(key));
 
             args.add(Keyword.INPUTS.getRaw());
@@ -349,7 +349,7 @@ public class RedisAI {
 
         try (Jedis conn = getConnection()) {
 
-            ArrayList<byte[]> args = new ArrayList<>();
+            List<byte[]> args = new ArrayList<>();
             args.add(SafeEncoder.encode(key));
             args.add(SafeEncoder.encode(function));
 

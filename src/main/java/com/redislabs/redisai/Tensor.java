@@ -94,8 +94,8 @@ public class Tensor {
      * @param key name of key to store the Model
      * @return
      */
-    protected ArrayList<byte[]> getTensorSetCommandBytes(String key) {
-        ArrayList<byte[]> args = new ArrayList<>();
+    protected List<byte[]> getTensorSetCommandBytes(String key) {
+        List<byte[]> args = new ArrayList<>();
         args.add(SafeEncoder.encode(key));
         args.add(dataType.getRaw());
         for (long shapeDimension : shape) {

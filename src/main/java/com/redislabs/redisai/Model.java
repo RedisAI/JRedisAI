@@ -131,8 +131,8 @@ public class Model {
      * @param key name of key to store the Model
      * @return
      */
-    protected ArrayList<byte[]> getModelSetCommandBytes(String key) {
-        ArrayList<byte[]> args = new ArrayList<>();
+    protected List<byte[]> getModelSetCommandBytes(String key) {
+        List<byte[]> args = new ArrayList<>();
         args.add(SafeEncoder.encode(key));
         args.add(backend.getRaw());
         args.add(device.getRaw());
