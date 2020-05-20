@@ -80,9 +80,9 @@ public class Script {
         }
         if (device != null && source != null) {
             script = new Script(device, source);
-        }
-        if (tag != null) {
-            script.setTag(tag);
+            if (tag != null) {
+                script.setTag(tag);
+            }
         }
         return script;
     }

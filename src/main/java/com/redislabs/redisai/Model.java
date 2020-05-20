@@ -70,9 +70,9 @@ public class Model {
             model = new Model(backend,
                     device,
                     new String[0], new String[0], blob);
-        }
-        if (tag != null) {
-            model.setTag(tag);
+            if (tag != null) {
+                model.setTag(tag);
+            }
         }
         return model;
     }
