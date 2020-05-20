@@ -146,7 +146,7 @@ public class RedisAI {
             if (reply.isEmpty()) {
                 return null;
             }
-            return Tensor.CreateTensorFromRespReply(reply);
+            return Tensor.createTensorFromRespReply(reply);
         }
     }
 
@@ -205,7 +205,7 @@ public class RedisAI {
             if (reply.isEmpty()) {
                 return null;
             }
-            return Model.CreateModelFromRespReply(reply);
+            return Model.createModelFromRespReply(reply);
         }
     }
 
@@ -294,7 +294,7 @@ public class RedisAI {
             if (reply.isEmpty()) {
                 return null;
             }
-            return Script.CreateScriptFromRespReply(reply);
+            return Script.createScriptFromRespReply(reply);
         }
     }
 

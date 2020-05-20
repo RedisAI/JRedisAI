@@ -53,7 +53,7 @@ public class Script {
         this.tag = "";
     }
 
-    public static Script CreateScriptFromRespReply(List<?> reply) {
+    public static Script createScriptFromRespReply(List<?> reply) {
         Script script = null;
         String source = null;
         Device device = null;

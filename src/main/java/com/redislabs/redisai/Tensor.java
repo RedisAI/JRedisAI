@@ -29,7 +29,7 @@ public class Tensor {
      * @param reply reply from RedisAI Server
      * @return Tensor Object
      */
-    protected static Tensor CreateTensorFromRespReply(List<?> reply) {
+    protected static Tensor createTensorFromRespReply(List<?> reply) {
         DataType dtype = null;
         long[] shape = null;
         Object values = null;

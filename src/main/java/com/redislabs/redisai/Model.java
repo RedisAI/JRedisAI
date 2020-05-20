@@ -33,7 +33,7 @@ public class Model {
         this.tag = "";
     }
 
-    public static Model CreateModelFromRespReply(List<?> reply) {
+    public static Model createModelFromRespReply(List<?> reply) {
         Model model = null;
         Backend backend = null;
         Device device = null;
