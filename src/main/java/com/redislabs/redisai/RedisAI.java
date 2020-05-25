@@ -1,5 +1,6 @@
 package com.redislabs.redisai;
 
+import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -9,8 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import redis.clients.jedis.BinaryClient;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -22,79 +21,74 @@ import redis.clients.jedis.util.SafeEncoder;
 
 public class RedisAI {
 
- 
   private final Pool<Jedis> pool;
-  
-  /**
-   * Create a new RedisAI client with default connection to local host
-   */
+
+  /** Create a new RedisAI client with default connection to local host */
   public RedisAI() {
     this("localhost", 6379);
-  }
-  
-  
-  /**
-   * Create a new RedisAI client  
-   *
-   * @param host      the redis host
-   * @param port      the redis pot
-   */
-  public RedisAI(String host, int port) {
-      this(host, port, 500, 100);
-  }
-  
-  /**
-   * Create a new RedisAI client
-   *
-   * @param host      the redis host
-   * @param port      the redis pot
-   */
-  public RedisAI(String host, int port, int timeout, int poolSize) {
-      this(host, port, timeout, poolSize, null);
   }
 
   /**
    * Create a new RedisAI client
    *
-   * @param host      the redis host
-   * @param port      the redis pot
-   * @param password  the password for authentication in a password protected Redis server
+   * @param host the redis host
+   * @param port the redis pot
    */
-  public RedisAI(String host, int port, int timeout, int poolSize, String password) {
-      this(new JedisPool(initPoolConfig(poolSize), host, port, timeout, password));
+  public RedisAI(String host, int port) {
+    this(host, port, 500, 100);
   }
-  
+
   /**
    * Create a new RedisAI client
    *
-   * @param pool      jedis connection pool
+   * @param host the redis host
+   * @param port the redis pot
+   */
+  public RedisAI(String host, int port, int timeout, int poolSize) {
+    this(host, port, timeout, poolSize, null);
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param host the redis host
+   * @param port the redis pot
+   * @param password the password for authentication in a password protected Redis server
+   */
+  public RedisAI(String host, int port, int timeout, int poolSize, String password) {
+    this(new JedisPool(initPoolConfig(poolSize), host, port, timeout, password));
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param pool jedis connection pool
    */
   public RedisAI(Pool<Jedis> pool) {
     this.pool = pool;
   }
-  
-  /**
-   * AI.TENSORSET tensor_key data_type shape1 shape2 ... [BLOB data | VALUES val1 val2 ...]
-   */
-  public boolean setTensor(String key, Object tensor, int[] dimensions){
+
+  /** AI.TENSORSET tensor_key data_type shape1 shape2 ... [BLOB data | VALUES val1 val2 ...] */
+  public boolean setTensor(String key, Object tensor, int[] dimensions) {
 
     DataType type = DataType.baseObjType(tensor);
-    
+
     try (Jedis conn = getConnection()) {
 
       ArrayList<byte[]> args = new ArrayList<>();
       args.add(SafeEncoder.encode(key));
       args.add(type.getRaw());
-      for(int shape : dimensions) {
+      for (int shape : dimensions) {
         args.add(Protocol.toByteArray(shape));
       }
       args.add(Keyword.VALUES.getRaw());
       args.addAll(type.toByteArray(tensor, dimensions));
-      
+
       return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply().equals("OK");
-      
-    } catch(JedisDataException ex ) {
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
@@ -107,55 +101,68 @@ public class RedisAI {
    */
   public Tensor getTensor(String key) throws JRedisAIRunTimeException {
     try (Jedis conn = getConnection()) {
-      List<?> reply = sendCommand(conn, Command.TENSOR_GET, SafeEncoder.encode(key), Keyword.META.getRaw(), Keyword.VALUES.getRaw() ).getObjectMultiBulkReply();
-      if(reply.isEmpty()) {
+      List<?> reply =
+          sendCommand(
+                  conn,
+                  Command.TENSOR_GET,
+                  SafeEncoder.encode(key),
+                  Keyword.META.getRaw(),
+                  Keyword.VALUES.getRaw())
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
         return null;
       }
       DataType dtype = null;
       long[] shape = null;
       Object values = null;
       Tensor tensor = null;
-      for (int i = 0; i < reply.size(); i+=2) {
+      for (int i = 0; i < reply.size(); i += 2) {
         String arrayKey = SafeEncoder.encode((byte[]) reply.get(i));
-        switch(arrayKey)
-        {
+        switch (arrayKey) {
           case "dtype":
-            String dtypeString = SafeEncoder.encode((byte[]) reply.get(i+1));
+            String dtypeString = SafeEncoder.encode((byte[]) reply.get(i + 1));
             dtype = DataType.getDataTypefromString(dtypeString);
-            if (dtype==null){
-              throw new JRedisAIRunTimeException("Unrecognized datatype: "+dtypeString);
+            if (dtype == null) {
+              throw new JRedisAIRunTimeException("Unrecognized datatype: " + dtypeString);
             }
             break;
           case "shape":
-            List<Long> shapeResp = (List<Long>)reply.get(i+1);
+            List<Long> shapeResp = (List<Long>) reply.get(i + 1);
             shape = new long[shapeResp.size()];
             for (int j = 0; j < shapeResp.size(); j++) {
               shape[j] = shapeResp.get(j);
             }
             break;
           case "values":
-            if (dtype==null){
-              throw new JRedisAIRunTimeException("Trying to decode values array without previous datatype info");
+            if (dtype == null) {
+              throw new JRedisAIRunTimeException(
+                  "Trying to decode values array without previous datatype info");
             }
-            List<byte[]> valuesEncoded = (List<byte[]>) reply.get(i+1);
+            List<byte[]> valuesEncoded = (List<byte[]>) reply.get(i + 1);
             values = dtype.toObject(valuesEncoded);
             break;
           default:
             break;
         }
       }
-      if (dtype!=null && shape!=null && values!=null){
-        tensor = new Tensor(dtype,shape,values);
+      if (dtype != null && shape != null && values != null) {
+        tensor = new Tensor(dtype, shape, values);
       }
       return tensor;
     }
-
   }
 
   /**
-   * AI.MODELSET model_key backend device [INPUTS name1 name2 ... OUTPUTS name1 name2 ...] model_blob
+   * AI.MODELSET model_key backend device [INPUTS name1 name2 ... OUTPUTS name1 name2 ...]
+   * model_blob
    */
-  public boolean setModel(String key, Backend backend, Device devive, String[] inputs, String[] outputs, String modelPath){
+  public boolean setModel(
+      String key,
+      Backend backend,
+      Device devive,
+      String[] inputs,
+      String[] outputs,
+      String modelPath) {
 
     try (Jedis conn = getConnection()) {
 
@@ -163,98 +170,93 @@ public class RedisAI {
       args.add(SafeEncoder.encode(key));
       args.add(backend.getRaw());
       args.add(devive.getRaw());
-      
+
       args.add(Keyword.INPUTS.getRaw());
-      for(String input: inputs) {
+      for (String input : inputs) {
         args.add(SafeEncoder.encode(input));
       }
-      
+
       args.add(Keyword.OUTPUTS.getRaw());
-      for(String output: outputs) {
+      for (String output : outputs) {
         args.add(SafeEncoder.encode(output));
       }
       args.add(Keyword.BLOB.getRaw());
       args.add(Files.readAllBytes(Paths.get(modelPath)));
-      
+
       return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply().equals("OK");
-      
-    } catch(JedisDataException | IOException ex ) {
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException | IOException ex) {
       throw new RedisAIException(ex);
     }
   }
-  
-  /**
-   * AI.SCRIPTSET script_key device script_source
-   */
-  public boolean setScriptFile(String key, Device device, String scriptFile){
+
+  /** AI.SCRIPTSET script_key device script_source */
+  public boolean setScriptFile(String key, Device device, String scriptFile) {
     try {
-      
-      String script = Files.readAllLines(Paths.get(scriptFile), StandardCharsets.UTF_8)
-          .stream()
-          .collect(Collectors.joining("\n")) + "\n";
-      
+
+      String script =
+          Files.readAllLines(Paths.get(scriptFile), StandardCharsets.UTF_8).stream()
+                  .collect(Collectors.joining("\n"))
+              + "\n";
+
       return setScript(key, device, script);
-      
-    } catch(IOException ex ) {
+
+    } catch (IOException ex) {
       throw new RedisAIException(ex);
     }
   }
-  
-  /**
-   * AI.SCRIPTSET script_key device script_source
-   */
-  public boolean setScript(String key, Device device, String script){
+
+  /** AI.SCRIPTSET script_key device script_source */
+  public boolean setScript(String key, Device device, String script) {
 
     try (Jedis conn = getConnection()) {
 
       ArrayList<byte[]> args = new ArrayList<>();
       args.add(SafeEncoder.encode(key));
       args.add(device.getRaw());
-      
+
       args.add(Keyword.SOURCE.getRaw());
       args.add(SafeEncoder.encode(script));
-      
+
       return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply().equals("OK");
-      
-    } catch(JedisDataException ex ) {
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
-  
-  /**
-   * AI.MODELRUN model_key INPUTS input_key1 ... OUTPUTS output_key1 ...
-   */
-  public boolean runModel(String key, String[] inputs, String[] outputs){
+
+  /** AI.MODELRUN model_key INPUTS input_key1 ... OUTPUTS output_key1 ... */
+  public boolean runModel(String key, String[] inputs, String[] outputs) {
 
     try (Jedis conn = getConnection()) {
 
       ArrayList<byte[]> args = new ArrayList<>();
       args.add(SafeEncoder.encode(key));
-      
+
       args.add(Keyword.INPUTS.getRaw());
-      for(String input: inputs) {
+      for (String input : inputs) {
         args.add(SafeEncoder.encode(input));
       }
-      
+
       args.add(Keyword.OUTPUTS.getRaw());
-      for(String output: outputs) {
+      for (String output : outputs) {
         args.add(SafeEncoder.encode(output));
       }
-      
+
       return sendCommand(conn, Command.MODEL_RUN, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply().equals("OK");
-      
-    } catch(JedisDataException ex) {
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
-  
 
-  /**
-   * AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ...
-   */
+  /** AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ... */
   public boolean runScript(String key, String function, String[] inputs, String[] outputs) {
 
     try (Jedis conn = getConnection()) {
@@ -262,21 +264,22 @@ public class RedisAI {
       ArrayList<byte[]> args = new ArrayList<>();
       args.add(SafeEncoder.encode(key));
       args.add(SafeEncoder.encode(function));
-      
+
       args.add(Keyword.INPUTS.getRaw());
-      for(String input: inputs) {
+      for (String input : inputs) {
         args.add(SafeEncoder.encode(input));
       }
-      
+
       args.add(Keyword.OUTPUTS.getRaw());
-      for(String output: outputs) {
+      for (String output : outputs) {
         args.add(SafeEncoder.encode(output));
       }
-      
+
       return sendCommand(conn, Command.SCRIPT_RUN, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply().equals("OK");
-      
-    } catch(JedisDataException ex) {
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
@@ -285,11 +288,12 @@ public class RedisAI {
    * AI.INFO <key> [RESETSTAT]
    *
    * @param key the key name of a model or script
-   * @return a map of attributes for the given model or script  
+   * @return a map of attributes for the given model or script
    */
   public Map<String, Object> getInfo(String key) {
     try (Jedis conn = getConnection()) {
-      List<Object> values = sendCommand(conn, Command.INFO, SafeEncoder.encode(key)).getObjectMultiBulkReply();
+      List<Object> values =
+          sendCommand(conn, Command.INFO, SafeEncoder.encode(key)).getObjectMultiBulkReply();
 
       Map<String, Object> infoMap = new HashMap<>(values.size());
       for (int i = 0; i < values.size(); i += 2) {
@@ -300,14 +304,13 @@ public class RedisAI {
         infoMap.put(SafeEncoder.encode((byte[]) values.get(i)), val);
       }
       return infoMap;
-    } catch(JedisDataException ex) {
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
 
   /**
-   * AI.INFO <key> RESETSTAT
-   * resets all statistics associated with the key
+   * AI.INFO <key> RESETSTAT resets all statistics associated with the key
    *
    * @param key the key name of a model or script
    * @return
@@ -315,8 +318,9 @@ public class RedisAI {
   public boolean resetStat(String key) {
     try (Jedis conn = getConnection()) {
       return sendCommand(conn, Command.INFO, SafeEncoder.encode(key), Keyword.RESETSTAT.getRaw())
-              .getStatusCodeReply().equals("OK");
-    } catch(JedisDataException ex) {
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
@@ -328,9 +332,11 @@ public class RedisAI {
    */
   public boolean setBackendsPath(String path) {
     try (Jedis conn = getConnection()) {
-      return sendCommand(conn, Command.CONFIG, Keyword.BACKENDSPATH.getRaw(), SafeEncoder.encode(path))
-              .getStatusCodeReply().equals("OK");
-    } catch(JedisDataException ex) {
+      return sendCommand(
+              conn, Command.CONFIG, Keyword.BACKENDSPATH.getRaw(), SafeEncoder.encode(path))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
@@ -342,23 +348,29 @@ public class RedisAI {
    */
   public boolean loadBackend(Backend backEnd, String path) {
     try (Jedis conn = getConnection()) {
-      return sendCommand(conn, Command.CONFIG, Keyword.LOADBACKEND.getRaw(), backEnd.getRaw(), SafeEncoder.encode(path))
-              .getStatusCodeReply().equals("OK");
-    } catch(JedisDataException ex) {
+      return sendCommand(
+              conn,
+              Command.CONFIG,
+              Keyword.LOADBACKEND.getRaw(),
+              backEnd.getRaw(),
+              SafeEncoder.encode(path))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
   }
-  
+
   private Jedis getConnection() {
     return pool.getResource();
   }
-  
+
   private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
     BinaryClient client = conn.getClient();
     client.sendCommand(command, args);
     return client;
   }
-  
+
   /**
    * Constructs JedisPoolConfig object.
    *
@@ -366,18 +378,17 @@ public class RedisAI {
    * @return {@link JedisPoolConfig} object with a few default settings
    */
   private static JedisPoolConfig initPoolConfig(int poolSize) {
-      JedisPoolConfig conf = new JedisPoolConfig();
-      conf.setMaxTotal(poolSize);
-      conf.setTestOnBorrow(false);
-      conf.setTestOnReturn(false);
-      conf.setTestOnCreate(false);
-      conf.setTestWhileIdle(false);
-      conf.setMinEvictableIdleTimeMillis(60000);
-      conf.setTimeBetweenEvictionRunsMillis(30000);
-      conf.setNumTestsPerEvictionRun(-1);
-      conf.setFairness(true);
+    JedisPoolConfig conf = new JedisPoolConfig();
+    conf.setMaxTotal(poolSize);
+    conf.setTestOnBorrow(false);
+    conf.setTestOnReturn(false);
+    conf.setTestOnCreate(false);
+    conf.setTestWhileIdle(false);
+    conf.setMinEvictableIdleTimeMillis(60000);
+    conf.setTimeBetweenEvictionRunsMillis(30000);
+    conf.setNumTestsPerEvictionRun(-1);
+    conf.setFairness(true);
 
-      return conf;
+    return conf;
   }
-  
 }

@@ -3,8 +3,9 @@ package com.redislabs.redisai;
 import redis.clients.jedis.commands.ProtocolCommand;
 import redis.clients.jedis.util.SafeEncoder;
 
-public enum Device implements ProtocolCommand{
-  CPU, GPU;
+public enum Device implements ProtocolCommand {
+  CPU,
+  GPU;
 
   private final byte[] raw;
 
@@ -14,5 +15,5 @@ public enum Device implements ProtocolCommand{
 
   public byte[] getRaw() {
     return raw;
-  } 
+  }
 }

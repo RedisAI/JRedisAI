@@ -4,19 +4,17 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
 import redis.clients.jedis.Protocol;
 import redis.clients.jedis.commands.ProtocolCommand;
 import redis.clients.jedis.util.SafeEncoder;
 
-public enum DataType implements ProtocolCommand{
-
+public enum DataType implements ProtocolCommand {
   INT32 {
     @Override
-    public List<byte[]> toByteArray(Object obj){
-      int[] values = (int[])obj;
+    public List<byte[]> toByteArray(Object obj) {
+      int[] values = (int[]) obj;
       List<byte[]> res = new ArrayList<>(values.length);
-      for(int value : values) {
+      for (int value : values) {
         res.add(Protocol.toByteArray(value));
       }
       return res;
@@ -24,19 +22,19 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      int [] values = new int[data.size()];
+      int[] values = new int[data.size()];
       for (int i = 0; i < data.size(); i++) {
         values[i] = Integer.parseInt(SafeEncoder.encode(data.get(i)));
       }
       return values;
     }
-  }, 
+  },
   INT64 {
     @Override
-    public List<byte[]> toByteArray(Object obj){
-      long[] values = (long[])obj;
+    public List<byte[]> toByteArray(Object obj) {
+      long[] values = (long[]) obj;
       List<byte[]> res = new ArrayList<>(values.length);
-      for(long value : values) {
+      for (long value : values) {
         res.add(Protocol.toByteArray(value));
       }
       return res;
@@ -44,19 +42,19 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      long [] values = new long[data.size()];
+      long[] values = new long[data.size()];
       for (int i = 0; i < data.size(); i++) {
         values[i] = Long.parseLong(SafeEncoder.encode(data.get(i)));
       }
       return values;
     }
-  }, 
+  },
   FLOAT {
     @Override
-    public List<byte[]> toByteArray(Object obj){
-      float[] values = (float[])obj;
+    public List<byte[]> toByteArray(Object obj) {
+      float[] values = (float[]) obj;
       List<byte[]> res = new ArrayList<>(values.length);
-      for(float value : values) {
+      for (float value : values) {
         res.add(Protocol.toByteArray(value));
       }
       return res;
@@ -64,19 +62,19 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      float [] values = new float[data.size()];
+      float[] values = new float[data.size()];
       for (int i = 0; i < data.size(); i++) {
         values[i] = Float.parseFloat(SafeEncoder.encode(data.get(i)));
       }
       return values;
     }
-  }, 
+  },
   DOUBLE {
     @Override
-    public List<byte[]> toByteArray(Object obj){
-      double[] values = (double[])obj;
+    public List<byte[]> toByteArray(Object obj) {
+      double[] values = (double[]) obj;
       List<byte[]> res = new ArrayList<>(values.length);
-      for(double value : values) {
+      for (double value : values) {
         res.add(Protocol.toByteArray(value));
       }
       return res;
@@ -84,19 +82,19 @@ public enum DataType implements ProtocolCommand{
 
     @Override
     protected Object toObject(List<byte[]> data) {
-      double [] values = new double[data.size()];
+      double[] values = new double[data.size()];
       for (int i = 0; i < data.size(); i++) {
         values[i] = Double.parseDouble(SafeEncoder.encode(data.get(i)));
       }
       return values;
     }
-  }, 
+  },
   STRING {
     @Override
-    public List<byte[]> toByteArray(Object obj){
-      byte[] values = (byte[])obj;
+    public List<byte[]> toByteArray(Object obj) {
+      byte[] values = (byte[]) obj;
       List<byte[]> res = new ArrayList<>(values.length);
-      for(byte value : values) {
+      for (byte value : values) {
         res.add(Protocol.toByteArray(value));
       }
       return res;
@@ -106,13 +104,13 @@ public enum DataType implements ProtocolCommand{
     protected Object toObject(List<byte[]> data) {
       return data;
     }
-  }, 
+  },
   BOOL {
     @Override
-    public List<byte[]> toByteArray(Object obj){
-      boolean[] values = (boolean[])obj;
+    public List<byte[]> toByteArray(Object obj) {
+      boolean[] values = (boolean[]) obj;
       List<byte[]> res = new ArrayList<>(values.length);
-      for(boolean value : values) {
+      for (boolean value : values) {
         res.add(Protocol.toByteArray(value));
       }
       return res;
@@ -128,6 +126,7 @@ public enum DataType implements ProtocolCommand{
   private final byte[] raw;
 
   private static final HashMap<Class<?>, DataType> classDataTypes = new HashMap<>();
+
   static {
     classDataTypes.put(int.class, DataType.INT32);
     classDataTypes.put(Integer.class, DataType.INT32);
@@ -149,29 +148,30 @@ public enum DataType implements ProtocolCommand{
 
   static DataType getDataTypefromString(String dtypeRaw) {
     DataType dt = null;
-    if (dtypeRaw.equals(DataType.INT32.name())){
-      dt=DataType.INT32;
+    if (dtypeRaw.equals(DataType.INT32.name())) {
+      dt = DataType.INT32;
     }
-    if (dtypeRaw.equals(DataType.INT64.name())){
-      dt=DataType.INT64;
+    if (dtypeRaw.equals(DataType.INT64.name())) {
+      dt = DataType.INT64;
     }
-    if (dtypeRaw.equals(DataType.FLOAT.name())){
-      dt=DataType.FLOAT;
+    if (dtypeRaw.equals(DataType.FLOAT.name())) {
+      dt = DataType.FLOAT;
     }
-    if (dtypeRaw.equals(DataType.DOUBLE.name())){
-      dt=DataType.DOUBLE;
+    if (dtypeRaw.equals(DataType.DOUBLE.name())) {
+      dt = DataType.DOUBLE;
     }
     return dt;
   }
 
   protected abstract List<byte[]> toByteArray(Object obj);
+
   protected abstract Object toObject(List<byte[]> data);
 
   public byte[] getRaw() {
     return raw;
   }
 
-  public List<byte[]> toByteArray(Object obj, int[] dimensions){
+  public List<byte[]> toByteArray(Object obj, int[] dimensions) {
     return toByteArray(obj, dimensions, 0, this);
   }
 
@@ -185,14 +185,14 @@ public enum DataType implements ProtocolCommand{
     if (ret != null) {
       return ret;
     }
-    throw new IllegalArgumentException("cannot create Tensors of type " + c.getName());  
+    throw new IllegalArgumentException("cannot create Tensors of type " + c.getName());
   }
-  
+
   private static List<byte[]> toByteArray(Object obj, int[] dimensions, int dim, DataType type) {
     ArrayList<byte[]> res = new ArrayList<>();
-    if(dimensions.length > dim+1) {
+    if (dimensions.length > dim + 1) {
       int dimension = dimensions[dim++];
-      for(int i=0 ; i < dimension; ++i) {
+      for (int i = 0; i < dimension; ++i) {
         Object value = Array.get(obj, i);
         res.addAll(toByteArray(value, dimensions, dim, type));
       }
@@ -202,5 +202,3 @@ public enum DataType implements ProtocolCommand{
     return res;
   }
 }
-
-

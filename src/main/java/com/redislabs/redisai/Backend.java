@@ -4,7 +4,8 @@ import redis.clients.jedis.commands.ProtocolCommand;
 import redis.clients.jedis.util.SafeEncoder;
 
 public enum Backend implements ProtocolCommand {
-  TF, TORCH;
+  TF,
+  TORCH;
 
   private final byte[] raw;
 
