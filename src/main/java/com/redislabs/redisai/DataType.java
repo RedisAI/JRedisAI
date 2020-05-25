@@ -90,39 +90,6 @@ public enum DataType implements ProtocolCommand {
             }
             return values;
         }
-    },
-    STRING {
-        @Override
-        public List<byte[]> toByteArray(Object obj) {
-            byte[] values = (byte[]) obj;
-            List<byte[]> res = new ArrayList<>(values.length);
-            for (byte value : values) {
-                res.add(Protocol.toByteArray(value));
-            }
-            return res;
-        }
-
-        @Override
-        protected Object toObject(List<byte[]> data) {
-            return data;
-        }
-    },
-    BOOL {
-        @Override
-        public List<byte[]> toByteArray(Object obj) {
-            boolean[] values = (boolean[]) obj;
-            List<byte[]> res = new ArrayList<>(values.length);
-            for (boolean value : values) {
-                res.add(Protocol.toByteArray(value));
-            }
-            return res;
-        }
-
-        @Override
-        protected Object toObject(List<byte[]> data) {
-            // TODO Auto-generated method stub
-            return null;
-        }
     };
 
     private static final HashMap<Class<?>, DataType> classDataTypes = new HashMap<>();
@@ -136,10 +103,6 @@ public enum DataType implements ProtocolCommand {
         classDataTypes.put(Float.class, DataType.FLOAT);
         classDataTypes.put(double.class, DataType.DOUBLE);
         classDataTypes.put(Double.class, DataType.DOUBLE);
-        classDataTypes.put(byte.class, DataType.STRING);
-        classDataTypes.put(Byte.class, DataType.STRING);
-        classDataTypes.put(boolean.class, DataType.BOOL);
-        classDataTypes.put(Boolean.class, DataType.BOOL);
     }
 
     private final byte[] raw;

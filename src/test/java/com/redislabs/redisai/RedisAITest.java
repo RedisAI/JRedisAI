@@ -15,16 +15,30 @@ public class RedisAITest {
 
     private final JedisPool pool = new JedisPool();
     private final RedisAI client = new RedisAI(pool);
-    private final RedisAI client_default_connection = new RedisAI();
-    private final RedisAI client_host_port = new RedisAI("localhost", 6379);
-    private final RedisAI client_poolsize = new RedisAI("localhost", 6379, 30000, 1);
-    private final RedisAI client_password = new RedisAI("localhost", 6379, 30000, 1, "");
+    private final RedisAI clientDefaultConnection = new RedisAI();
+    private final RedisAI clientHostPort = new RedisAI("localhost", 6379);
+    private final RedisAI clientPoolSize = new RedisAI("localhost", 6379, 30000, 1);
 
     @Before
     public void testClient() {
         try (Jedis conn = pool.getResource()) {
             conn.flushAll();
         }
+    }
+
+    @Test
+    public void testClientDefaultConnectionConstructorSetTensorFLOAT() {
+        Assert.assertTrue(clientDefaultConnection.setTensor("ClientDefaultConnectionConstructor:tensor", new float[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
+    }
+
+    @Test
+    public void testClientHostPortConstructorSetTensorFLOAT() {
+        Assert.assertTrue(clientHostPort.setTensor("ClientHostPortConstructor:tensor", new float[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
+    }
+
+    @Test
+    public void testClientPoolSizeConstructorSetTensorFLOAT() {
+        Assert.assertTrue(clientPoolSize.setTensor("ClientPoolSizeConstructor:tensor", new float[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
     }
 
     @Test
@@ -82,10 +96,28 @@ public class RedisAITest {
     public void testSetModel() {
         ClassLoader classLoader = getClass().getClassLoader();
         String model = classLoader.getResource("test_data/graph.pb").getFile();
-        Assert.assertTrue(client.setModel("model", Backend.TF, Device.CPU, new String[]{"a", "b"}, new String[]{"mul"}, model));
+        String[] inputs = new String[]{"a", "b"};
+        String[] outputs = new String[]{"mul"};
+        Assert.assertTrue(client.setModel("model", Backend.TF, Device.CPU, inputs, outputs, model));
         Model m1 = client.getModel("model");
         Assert.assertEquals(Device.CPU, m1.getDevice());
         Assert.assertEquals(Backend.TF, m1.getBackend());
+        Assert.assertArrayEquals(inputs, m1.getInputs());
+        Assert.assertArrayEquals(outputs, m1.getOutputs());
+        Assert.assertEquals(0, m1.getBatchSize());
+        Assert.assertEquals(0, m1.getMinBatchSize());
+        m1.setBatchSize(10);
+        m1.setMinBatchSize(5);
+        m1.setTag("test minbatching 5 batchsize 10");
+        Assert.assertTrue(client.setModel("model:m1", m1 ));
+        Model m1FromKeyspace = client.getModel("model:m1");
+        Assert.assertEquals(10, m1FromKeyspace.getBatchSize());
+        Assert.assertEquals(5, m1FromKeyspace.getMinBatchSize());
+        Assert.assertEquals(Device.CPU, m1FromKeyspace.getDevice());
+        Assert.assertEquals(Backend.TF, m1FromKeyspace.getBackend());
+        Assert.assertArrayEquals(inputs, m1FromKeyspace.getInputs());
+        Assert.assertArrayEquals(outputs, m1FromKeyspace.getOutputs());
+        Assert.assertEquals("test minbatching 5 batchsize 10", m1FromKeyspace.getTag());
     }
 
     @Test
@@ -162,7 +194,7 @@ public class RedisAITest {
         Tensor tensor = client.getTensor("c");
         float[] values = (float[]) tensor.getValues();
         float[] expected = new float[]{6, 15};
-        Assert.assertTrue("Assert same shape of values", values.length == 2);
+        Assert.assertEquals("Assert same shape of values", 2, values.length);
         Assert.assertArrayEquals(values, expected, (float) 0.1);
     }
 
@@ -194,7 +226,6 @@ public class RedisAITest {
     @Test
     public void testSetScriptNegative() {
         try {
-            ClassLoader classLoader = getClass().getClassLoader();
             Script script = new Script(Device.CPU, "bad function -----");
             client.setScript("script.error1", script);
             Assert.fail("Should throw JedisDataException");
@@ -203,7 +234,6 @@ public class RedisAITest {
         }
 
         try {
-            ClassLoader classLoader = getClass().getClassLoader();
             client.setScript("script.error1", Device.CPU, "bad function -----");
             Assert.fail("Should throw JedisDataException");
         } catch (RedisAIException e) {
@@ -238,7 +268,7 @@ public class RedisAITest {
         Assert.assertTrue(client.setTensor("t1", new float[][]{{1, 2}, {3, 4}}, new int[]{2, 2}));
         Tensor tensor = client.getTensor("t1");
         float[] values = (float[]) tensor.getValues();
-        Assert.assertTrue("Assert same shape of values", values.length == 4);
+        Assert.assertEquals("Assert same shape of values", 4, values.length);
         float[] expected = new float[]{1, 2, 3, 4};
         Assert.assertArrayEquals(values, expected, (float) 0.1);
     }
@@ -251,7 +281,7 @@ public class RedisAITest {
         Assert.assertTrue(client.setScript(key, Device.CPU, script));
 
         // not exist
-        Map<String, Object> infoMap = null;
+        Map<String, Object> infoMap;
         try {
             infoMap = client.getInfo("not:exist");
             Assert.fail("Should throw RedisAIException");

@@ -1,6 +1,7 @@
 package com.redislabs.redisai;
 
 import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
+import redis.clients.jedis.Protocol;
 import redis.clients.jedis.util.SafeEncoder;
 
 import java.util.ArrayList;
@@ -16,6 +17,9 @@ public class Model {
     private String[] outputs;
     private byte[] blob;
     private String tag;
+    private long batchSize;
+    private long minBatchSize;
+
 
     /**
      * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
@@ -30,7 +34,9 @@ public class Model {
         this.inputs = inputs;
         this.outputs = outputs;
         this.blob = blob;
-        this.tag = "";
+        this.tag = null;
+        this.batchSize = 0;
+        this.minBatchSize = 0;
     }
 
     public static Model createModelFromRespReply(List<?> reply) {
@@ -39,6 +45,10 @@ public class Model {
         Device device = null;
         String tag = null;
         byte[] blob = null;
+        long batchsize = -1;
+        long minbatchsize = -1;
+        String[] inputs = new String[0];
+        String[] outputs = new String[0];
         for (int i = 0; i < reply.size(); i += 2) {
             String arrayKey = SafeEncoder.encode((byte[]) reply.get(i));
             switch (arrayKey) {
@@ -62,6 +72,30 @@ public class Model {
                 case "blob":
                     blob = (byte[]) reply.get(i + 1);
                     break;
+                case "batchsize":
+                    batchsize = (Long) reply.get(i + 1);
+                    break;
+                case "minbatchsize":
+                    minbatchsize = (Long) reply.get(i + 1);
+                    break;
+                case "inputs":
+                    List<byte[]> inputsEncoded = (List<byte[]>) reply.get(i + 1);
+                    if(inputsEncoded.size()>0){
+                        inputs = new String[inputsEncoded.size()];
+                        for (int j=0;j<inputsEncoded.size();j++){
+                            inputs[j]=SafeEncoder.encode(inputsEncoded.get(j));
+                        }
+                    }
+                    break;
+                case "outputs":
+                    List<byte[]> outputsEncoded = (List<byte[]>) reply.get(i + 1);
+                    if(outputsEncoded.size()>0){
+                        outputs = new String[outputsEncoded.size()];
+                        for (int j=0;j<outputsEncoded.size();j++){
+                            outputs[j]=SafeEncoder.encode(outputsEncoded.get(j));
+                        }
+                    }
+                    break;
                 default:
                     break;
             }
@@ -69,9 +103,15 @@ public class Model {
         if (backend != null && device != null && blob != null) {
             model = new Model(backend,
                     device,
-                    new String[0], new String[0], blob);
+                    inputs, outputs, blob);
             if (tag != null) {
                 model.setTag(tag);
+            }
+            if (batchsize > -1) {
+                model.setBatchSize(batchsize);
+            }
+            if (minbatchsize > -1) {
+                model.setMinBatchSize(minbatchsize);
             }
         }
         return model;
@@ -125,6 +165,22 @@ public class Model {
         this.backend = backend;
     }
 
+    public long getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(long batchsize) {
+        this.batchSize = batchsize;
+    }
+
+    public long getMinBatchSize() {
+        return minBatchSize;
+    }
+
+    public void setMinBatchSize(long minbatchsize) {
+        this.minBatchSize = minbatchsize;
+    }
+
     /**
      * Encodes the current model properties into an AI.MODELSET command to be store in RedisAI Server
      *
@@ -136,6 +192,18 @@ public class Model {
         args.add(SafeEncoder.encode(key));
         args.add(backend.getRaw());
         args.add(device.getRaw());
+        if (tag != null) {
+            args.add(Keyword.TAG.getRaw());
+            args.add(SafeEncoder.encode(tag));
+        }
+        if (batchSize>0){
+            args.add(Keyword.BATCHSIZE.getRaw());
+            args.add(Protocol.toByteArray(batchSize));
+            if (minBatchSize>0){
+                args.add(Keyword.MINBATCHSIZE.getRaw());
+                args.add(Protocol.toByteArray(minBatchSize));
+            }
+        }
         args.add(Keyword.INPUTS.getRaw());
         for (String input : inputs) {
             args.add(SafeEncoder.encode(input));
@@ -148,5 +216,4 @@ public class Model {
         args.add(blob);
         return args;
     }
-
 }

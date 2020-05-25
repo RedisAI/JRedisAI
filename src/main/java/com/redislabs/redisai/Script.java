@@ -39,7 +39,7 @@ public class Script {
     public Script(Device device, String source) {
         this.device = device;
         this.source = source;
-        this.tag = "";
+        this.tag = null;
     }
 
     /**
@@ -50,7 +50,7 @@ public class Script {
     public Script(Device device) {
         this.device = device;
         this.source = "";
-        this.tag = "";
+        this.tag = null;
     }
 
     public static Script createScriptFromRespReply(List<?> reply) {
@@ -121,6 +121,10 @@ public class Script {
         List<byte[]> args = new ArrayList<>();
         args.add(SafeEncoder.encode(key));
         args.add(device.getRaw());
+        if(tag!=null){
+            args.add(Keyword.TAG.getRaw());
+            args.add(SafeEncoder.encode(tag));
+        }
         args.add(Keyword.SOURCE.getRaw());
         args.add(SafeEncoder.encode(source));
         return args;

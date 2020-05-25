@@ -29,7 +29,7 @@ public class ScriptTest {
     public void setGetTag() {
         Script script = new Script(Device.GPU);
         String tag = script.getTag();
-        Assert.assertEquals(tag, "");
+        Assert.assertEquals(null, tag);
         script.setTag("tagExample");
         tag = script.getTag();
         Assert.assertEquals(tag, "tagExample");

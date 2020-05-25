@@ -9,7 +9,7 @@ public class ModelTest {
     public void getSetTag() {
         Model model = new Model(Backend.ONNX, Device.GPU, new String[0], new String[0], new byte[0]);
         String tag = model.getTag();
-        Assert.assertEquals(tag, "");
+        Assert.assertEquals(null, tag);
         model.setTag("tagExample");
         tag = model.getTag();
         Assert.assertEquals(tag, "tagExample");
@@ -71,4 +71,23 @@ public class ModelTest {
         Assert.assertEquals(Backend.TF, backend);
     }
 
+    @Test
+    public void getSetBatchSize() {
+        Model model = new Model(Backend.ONNX, Device.GPU, new String[0], new String[0], new byte[0]);
+        long batchsize = model.getBatchSize();
+        Assert.assertEquals(0, batchsize);
+        model.setBatchSize(10);
+        batchsize = model.getBatchSize();
+        Assert.assertEquals(10, batchsize);
+    }
+
+    @Test
+    public void getSetMinBatchSize() {
+        Model model = new Model(Backend.ONNX, Device.GPU, new String[0], new String[0], new byte[0]);
+        long minbatchsize = model.getMinBatchSize();
+        Assert.assertEquals(0, minbatchsize);
+        model.setMinBatchSize(10);
+        minbatchsize = model.getMinBatchSize();
+        Assert.assertEquals(10, minbatchsize);
+    }
 }
