@@ -13,7 +13,8 @@ public enum Command implements ProtocolCommand{
     SCRIPT_GET("AI.SCRIPTGET"),
     SCRIPT_SET("AI.SCRIPTSET"),
     SCRIPT_RUN("AI.SCRIPTRUN"),
-    INFO("AI.INFO");
+    INFO("AI.INFO"),
+    CONFIG("AI.CONFIG");
 
     
     private final byte[] raw;

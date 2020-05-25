@@ -131,4 +131,17 @@ public class RedisAITest {
       // ERR cannot find run info for key
     }
   }
+
+  @Test
+  public void testConfig() {
+    Assert.assertTrue(client.setBackendPath("/usr/lib/redis/modules/backends/"));
+    try {
+      client.loadBackend(Backend.TF, "notexist/redisai_tensorflow.so");
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      // ERR error loading backend
+    }
+    // will throw error if backend already loaded
+    Assert.assertTrue(client.loadBackend(Backend.TF, "redisai_tensorflow/redisai_tensorflow.so"));
+  }
 }
