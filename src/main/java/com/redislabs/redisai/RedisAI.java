@@ -320,6 +320,34 @@ public class RedisAI {
       throw new RedisAIException(ex);
     }
   }
+
+  /**
+   * AI.CONFIG <BACKENDSPATH <path>>
+   *
+   * @return
+   */
+  public boolean setBackendsPath(String path) {
+    try (Jedis conn = getConnection()) {
+      return sendCommand(conn, Command.CONFIG, Keyword.BACKENDSPATH.getRaw(), SafeEncoder.encode(path))
+              .getStatusCodeReply().equals("OK");
+    } catch(JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * AI.CONFIG <LOADBACKEND <backend> <path>>
+   *
+   * @return
+   */
+  public boolean loadBackend(Backend backEnd, String path) {
+    try (Jedis conn = getConnection()) {
+      return sendCommand(conn, Command.CONFIG, Keyword.LOADBACKEND.getRaw(), backEnd.getRaw(), SafeEncoder.encode(path))
+              .getStatusCodeReply().equals("OK");
+    } catch(JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
   
   private Jedis getConnection() {
     return pool.getResource();
