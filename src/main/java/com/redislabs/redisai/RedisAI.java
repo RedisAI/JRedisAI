@@ -326,7 +326,7 @@ public class RedisAI {
    *
    * @return
    */
-  public boolean setBackendPath(String path) {
+  public boolean setBackendsPath(String path) {
     try (Jedis conn = getConnection()) {
       return sendCommand(conn, Command.CONFIG, Keyword.BACKENDSPATH.getRaw(), SafeEncoder.encode(path))
               .getStatusCodeReply().equals("OK");

@@ -134,7 +134,7 @@ public class RedisAITest {
 
   @Test
   public void testConfig() {
-    Assert.assertTrue(client.setBackendPath("/usr/lib/redis/modules/backends/"));
+    Assert.assertTrue(client.setBackendsPath("/usr/lib/redis/modules/backends/"));
     try {
       client.loadBackend(Backend.TF, "notexist/redisai_tensorflow.so");
       Assert.fail("Should throw JedisDataException");
