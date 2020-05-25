@@ -20,9 +20,7 @@ public enum Command implements ProtocolCommand {
     // TODO: support AI.DAGRUN_RO
     DAGRUN_RO("AI.DAGRUN_RO"),
     INFO("AI.INFO"),
-    // TODO: support AI.CONFIG
-    CONFIG("AI.DAGRUN_RO");
-
+    CONFIG("AI.CONFIG");
 
     private final byte[] raw;
 

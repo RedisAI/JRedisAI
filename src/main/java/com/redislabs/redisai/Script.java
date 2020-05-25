@@ -121,7 +121,7 @@ public class Script {
         List<byte[]> args = new ArrayList<>();
         args.add(SafeEncoder.encode(key));
         args.add(device.getRaw());
-        if(tag!=null){
+        if (tag != null) {
             args.add(Keyword.TAG.getRaw());
             args.add(SafeEncoder.encode(tag));
         }

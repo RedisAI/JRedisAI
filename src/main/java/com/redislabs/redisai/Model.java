@@ -80,19 +80,19 @@ public class Model {
                     break;
                 case "inputs":
                     List<byte[]> inputsEncoded = (List<byte[]>) reply.get(i + 1);
-                    if(inputsEncoded.size()>0){
+                    if (inputsEncoded.size() > 0) {
                         inputs = new String[inputsEncoded.size()];
-                        for (int j=0;j<inputsEncoded.size();j++){
-                            inputs[j]=SafeEncoder.encode(inputsEncoded.get(j));
+                        for (int j = 0; j < inputsEncoded.size(); j++) {
+                            inputs[j] = SafeEncoder.encode(inputsEncoded.get(j));
                         }
                     }
                     break;
                 case "outputs":
                     List<byte[]> outputsEncoded = (List<byte[]>) reply.get(i + 1);
-                    if(outputsEncoded.size()>0){
+                    if (outputsEncoded.size() > 0) {
                         outputs = new String[outputsEncoded.size()];
-                        for (int j=0;j<outputsEncoded.size();j++){
-                            outputs[j]=SafeEncoder.encode(outputsEncoded.get(j));
+                        for (int j = 0; j < outputsEncoded.size(); j++) {
+                            outputs[j] = SafeEncoder.encode(outputsEncoded.get(j));
                         }
                     }
                     break;
@@ -196,10 +196,10 @@ public class Model {
             args.add(Keyword.TAG.getRaw());
             args.add(SafeEncoder.encode(tag));
         }
-        if (batchSize>0){
+        if (batchSize > 0) {
             args.add(Keyword.BATCHSIZE.getRaw());
             args.add(Protocol.toByteArray(batchSize));
-            if (minBatchSize>0){
+            if (minBatchSize > 0) {
                 args.add(Keyword.MINBATCHSIZE.getRaw());
                 args.add(Protocol.toByteArray(minBatchSize));
             }

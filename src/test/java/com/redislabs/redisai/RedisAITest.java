@@ -93,6 +93,22 @@ public class RedisAITest {
     }
 
     @Test
+    public void testConfig() {
+        Assert.assertTrue(client.setBackendsPath("/usr/lib/redis/modules/backends/"));
+        try {
+            client.loadBackend(Backend.TF, "notexist/redisai_tensorflow.so");
+            Assert.fail("Should throw JedisDataException");
+        } catch (RedisAIException e) {
+            // ERR error loading backend
+        }
+        try {
+            client.loadBackend(Backend.TF, "redisai_tensorflow/redisai_tensorflow.so");
+        } catch (RedisAIException e) {
+            // will throw error if backend already loaded
+        }
+    }
+
+    @Test
     public void testSetModel() {
         ClassLoader classLoader = getClass().getClassLoader();
         String model = classLoader.getResource("test_data/graph.pb").getFile();
@@ -109,7 +125,7 @@ public class RedisAITest {
         m1.setBatchSize(10);
         m1.setMinBatchSize(5);
         m1.setTag("test minbatching 5 batchsize 10");
-        Assert.assertTrue(client.setModel("model:m1", m1 ));
+        Assert.assertTrue(client.setModel("model:m1", m1));
         Model m1FromKeyspace = client.getModel("model:m1");
         Assert.assertEquals(10, m1FromKeyspace.getBatchSize());
         Assert.assertEquals(5, m1FromKeyspace.getMinBatchSize());
@@ -357,6 +373,4 @@ public class RedisAITest {
         Assert.assertEquals(script1.getTag(), script2.getTag());
         Assert.assertEquals(script1.getSource(), script2.getSource());
     }
-
-
 }
