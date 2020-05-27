@@ -95,21 +95,13 @@ public class RedisAI {
    * @return true if Tensor was properly set in RedisAI server
    */
   public boolean setTensor(String key, Object values, int[] shape) {
-    try (Jedis conn = getConnection()) {
-      DataType dataType = DataType.baseObjType(values);
-      long[] shapeL = new long[shape.length];
-      for (int i = 0; i < shape.length; i++) {
-        shapeL[i] = shape[i];
-      }
-      Tensor tensor = new Tensor(dataType, shapeL, values);
-      List<byte[]> args = tensor.getTensorSetCommandBytes(key);
-      return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply()
-          .equals("OK");
-
-    } catch (JedisDataException ex) {
-      throw new RedisAIException(ex);
+    DataType dataType = DataType.baseObjType(values);
+    long[] shapeL = new long[shape.length];
+    for (int i = 0; i < shape.length; i++) {
+      shapeL[i] = shape[i];
     }
+    Tensor tensor = new Tensor(dataType, shapeL, values);
+    return setTensor(key, tensor);
   }
 
   /**
@@ -175,15 +167,11 @@ public class RedisAI {
       String[] outputs,
       String modelPath) {
 
-    try (Jedis conn = getConnection()) {
+    try {
       byte[] blob = Files.readAllBytes(Paths.get(modelPath));
       Model model = new Model(backend, device, inputs, outputs, blob);
-      List<byte[]> args = model.getModelSetCommandBytes(key);
-      return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply()
-          .equals("OK");
-
-    } catch (JedisDataException | IOException ex) {
+      return setModel(key, model);
+    } catch (IOException ex) {
       throw new RedisAIException(ex);
     }
   }
@@ -257,8 +245,7 @@ public class RedisAI {
    */
   public boolean setScriptFile(String key, Device device, String scriptFile) {
     try {
-      Script script = new Script(device);
-      script.readSourceFromFile(scriptFile);
+      Script script = new Script(device, Paths.get(scriptFile));
       return setScript(key, script);
     } catch (IOException ex) {
       throw new RedisAIException(ex);
@@ -274,16 +261,8 @@ public class RedisAI {
    * @return true if Script was properly set in RedisAI server
    */
   public boolean setScript(String key, Device device, String source) {
-    try (Jedis conn = getConnection()) {
-      Script script = new Script(device, source);
-      List<byte[]> args = script.getScriptSetCommandBytes(key);
-      return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply()
-          .equals("OK");
-
-    } catch (JedisDataException ex) {
-      throw new RedisAIException(ex);
-    }
+    Script script = new Script(device, source);
+    return setScript(key, script);
   }
 
   /**

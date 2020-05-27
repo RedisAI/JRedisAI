@@ -4,6 +4,7 @@ import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,27 +25,34 @@ public class Script {
    */
   private String tag;
 
-  /**
-   * the device that will execute the model. can be of CPU or GPU
-   *
-   * @param device
-   * @param source a string containing TorchScript source code
-   */
-  public Script(Device device, String source) {
-    this.device = device;
-    this.source = source;
-    this.tag = null;
-  }
-
-  /**
-   * the device that will execute the model. can be of CPU or GPU
-   *
-   * @param device
-   */
+  /** @param device the device that will execute the model. can be of CPU or GPU */
   public Script(Device device) {
     this.device = device;
     this.source = "";
     this.tag = null;
+  }
+
+  /**
+   * @param device the device that will execute the model. can be of CPU or GPU
+   * @param source a string containing TorchScript source code
+   */
+  public Script(Device device, String source) {
+    this(device);
+    this.source = source;
+  }
+
+  /**
+   * Constructor given the device string and the Path containing the script
+   *
+   * @param device the device that will execute the model. can be of CPU or GPU
+   * @param filePath file path to load the script from
+   */
+  public Script(Device device, Path filePath) throws IOException {
+    this(device);
+    this.source =
+        Files.readAllLines(filePath, StandardCharsets.UTF_8).stream()
+                .collect(Collectors.joining("\n"))
+            + "\n";
   }
 
   public static Script createScriptFromRespReply(List<?> reply) {
