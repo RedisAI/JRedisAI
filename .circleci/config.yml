@@ -35,8 +35,10 @@ jobs:
             - ~/.m2
           key: v1-dependencies-{{ checksum "pom.xml" }}
         
+      # validate code format
+      - run: mvn git-code-format:validate-code-format -Dgcf.globPattern=**/*
       # run tests!
-      - run: mvn integration-test 
+      - run: mvn integration-test
       - run: mvn cobertura:cobertura          
       - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}  
               

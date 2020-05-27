@@ -1,6 +1,13 @@
 package com.redislabs.redisai;
 
 import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import redis.clients.jedis.BinaryClient;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -9,444 +16,474 @@ import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.util.Pool;
 import redis.clients.jedis.util.SafeEncoder;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public class RedisAI {
 
+  private final Pool<Jedis> pool;
 
-    private final Pool<Jedis> pool;
+  /** Create a new RedisAI client with default connection to local host */
+  public RedisAI() {
+    this("localhost", 6379);
+  }
 
-    /**
-     * Create a new RedisAI client with default connection to local host
-     */
-    public RedisAI() {
-        this("localhost", 6379);
+  /**
+   * Create a new RedisAI client
+   *
+   * @param host the redis host
+   * @param port the redis pot
+   */
+  public RedisAI(String host, int port) {
+    this(host, port, 500, 100);
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param host the redis host
+   * @param port the redis pot
+   */
+  public RedisAI(String host, int port, int timeout, int poolSize) {
+    this(host, port, timeout, poolSize, null);
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param host the redis host
+   * @param port the redis pot
+   * @param password the password for authentication in a password protected Redis server
+   */
+  public RedisAI(String host, int port, int timeout, int poolSize, String password) {
+    this(new JedisPool(initPoolConfig(poolSize), host, port, timeout, password));
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param pool jedis connection pool
+   */
+  public RedisAI(Pool<Jedis> pool) {
+    this.pool = pool;
+  }
+
+  /**
+   * Constructs JedisPoolConfig object.
+   *
+   * @param poolSize size of the JedisPool
+   * @return {@link JedisPoolConfig} object with a few default settings
+   */
+  private static JedisPoolConfig initPoolConfig(int poolSize) {
+    JedisPoolConfig conf = new JedisPoolConfig();
+    conf.setMaxTotal(poolSize);
+    conf.setTestOnBorrow(false);
+    conf.setTestOnReturn(false);
+    conf.setTestOnCreate(false);
+    conf.setTestWhileIdle(false);
+    conf.setMinEvictableIdleTimeMillis(60000);
+    conf.setTimeBetweenEvictionRunsMillis(30000);
+    conf.setNumTestsPerEvictionRun(-1);
+    conf.setFairness(true);
+
+    return conf;
+  }
+
+  /**
+   * Direct mapping to AI.TENSORSET
+   *
+   * @param key name of key to store the Tensor
+   * @param values multi-dimension numeric data
+   * @param shape one or more dimensions, or the number of elements per axis, for the tensor
+   * @return true if Tensor was properly set in RedisAI server
+   */
+  public boolean setTensor(String key, Object values, int[] shape) {
+    try (Jedis conn = getConnection()) {
+      DataType dataType = DataType.baseObjType(values);
+      long[] shapeL = new long[shape.length];
+      for (int i = 0; i < shape.length; i++) {
+        shapeL[i] = shape[i];
+      }
+      Tensor tensor = new Tensor(dataType, shapeL, values);
+      List<byte[]> args = tensor.getTensorSetCommandBytes(key);
+      return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
     }
+  }
 
+  /**
+   * Direct mapping to AI.TENSORSET
+   *
+   * @param key name of key to store the Tensor
+   * @param tensor Tensor object
+   * @return true if Tensor was properly set in RedisAI server
+   */
+  public boolean setTensor(String key, Tensor tensor) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = tensor.getTensorSetCommandBytes(key);
+      return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
 
-    /**
-     * Create a new RedisAI client
-     *
-     * @param host the redis host
-     * @param port the redis pot
-     */
-    public RedisAI(String host, int port) {
-        this(host, port, 500, 100);
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
     }
+  }
 
-    /**
-     * Create a new RedisAI client
-     *
-     * @param host the redis host
-     * @param port the redis pot
-     */
-    public RedisAI(String host, int port, int timeout, int poolSize) {
-        this(host, port, timeout, poolSize, null);
+  /**
+   * Direct mapping to AI.TENSORGET
+   *
+   * @param key name of key to get the Tensor from
+   * @return Tensor
+   */
+  public Tensor getTensor(String key) throws JRedisAIRunTimeException {
+    try (Jedis conn = getConnection()) {
+      List<?> reply =
+          sendCommand(
+                  conn,
+                  Command.TENSOR_GET,
+                  SafeEncoder.encode(key),
+                  Keyword.META.getRaw(),
+                  Keyword.VALUES.getRaw())
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return Tensor.createTensorFromRespReply(reply);
     }
+  }
 
-    /**
-     * Create a new RedisAI client
-     *
-     * @param host     the redis host
-     * @param port     the redis pot
-     * @param password the password for authentication in a password protected Redis server
-     */
-    public RedisAI(String host, int port, int timeout, int poolSize, String password) {
-        this(new JedisPool(initPoolConfig(poolSize), host, port, timeout, password));
+  /**
+   * Direct mapping to AI.MODELSET
+   *
+   * @param key name of key to store the Model
+   * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param inputs - one or more names of the model's input nodes (applicable only for TensorFlow
+   *     models)
+   * @param outputs - one or more names of the model's output nodes (applicable only for TensorFlow
+   *     models)
+   * @param modelPath - the file path for the Protobuf-serialized model
+   * @return true if Model was properly set in RedisAI server
+   */
+  public boolean setModel(
+      String key,
+      Backend backend,
+      Device device,
+      String[] inputs,
+      String[] outputs,
+      String modelPath) {
+
+    try (Jedis conn = getConnection()) {
+      byte[] blob = Files.readAllBytes(Paths.get(modelPath));
+      Model model = new Model(backend, device, inputs, outputs, blob);
+      List<byte[]> args = model.getModelSetCommandBytes(key);
+      return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException | IOException ex) {
+      throw new RedisAIException(ex);
     }
+  }
 
-    /**
-     * Create a new RedisAI client
-     *
-     * @param pool jedis connection pool
-     */
-    public RedisAI(Pool<Jedis> pool) {
-        this.pool = pool;
+  /**
+   * Direct mapping to AI.MODELSET
+   *
+   * @param key name of key to store the Model
+   * @param model Model object
+   * @return true if Model was properly set in RedisAI server
+   */
+  public boolean setModel(String key, Model model) {
+
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = model.getModelSetCommandBytes(key);
+      return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
     }
+  }
 
-    /**
-     * Constructs JedisPoolConfig object.
-     *
-     * @param poolSize size of the JedisPool
-     * @return {@link JedisPoolConfig} object with a few default settings
-     */
-    private static JedisPoolConfig initPoolConfig(int poolSize) {
-        JedisPoolConfig conf = new JedisPoolConfig();
-        conf.setMaxTotal(poolSize);
-        conf.setTestOnBorrow(false);
-        conf.setTestOnReturn(false);
-        conf.setTestOnCreate(false);
-        conf.setTestWhileIdle(false);
-        conf.setMinEvictableIdleTimeMillis(60000);
-        conf.setTimeBetweenEvictionRunsMillis(30000);
-        conf.setNumTestsPerEvictionRun(-1);
-        conf.setFairness(true);
-
-        return conf;
+  /**
+   * Direct mapping to AI.MODELGET
+   *
+   * @param key name of key to get the Model from RedisAI server
+   * @return Model
+   */
+  public Model getModel(String key) throws JRedisAIRunTimeException {
+    try (Jedis conn = getConnection()) {
+      List<?> reply =
+          sendCommand(
+                  conn,
+                  Command.MODEL_GET,
+                  SafeEncoder.encode(key),
+                  Keyword.META.getRaw(),
+                  Keyword.BLOB.getRaw())
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return Model.createModelFromRespReply(reply);
     }
+  }
 
-    /**
-     * Direct mapping to AI.TENSORSET
-     *
-     * @param key    name of key to store the Tensor
-     * @param values multi-dimension numeric data
-     * @param shape  one or more dimensions, or the number of elements per axis, for the tensor
-     * @return true if Tensor was properly set in RedisAI server
-     */
-    public boolean setTensor(String key, Object values, int[] shape) {
-        try (Jedis conn = getConnection()) {
-            DataType dataType = DataType.baseObjType(values);
-            long[] shapeL = new long[shape.length];
-            for (int i = 0; i < shape.length; i++) {
-                shapeL[i] = shape[i];
-            }
-            Tensor tensor = new Tensor(dataType, shapeL, values);
-            List<byte[]> args = tensor.getTensorSetCommandBytes(key);
-            return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
+  /**
+   * Direct mapping to AI.MODELDEL
+   *
+   * @param key name of key to delete the Model
+   * @return true if Model was properly delete in RedisAI server
+   */
+  public boolean delModel(String key) {
 
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
+    try (Jedis conn = getConnection()) {
+      return sendCommand(conn, Command.MODEL_DEL, SafeEncoder.encode(key))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.SCRIPTSET
+   *
+   * @param key name of key to store the Script in RedisAI server
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param scriptFile - the file path for the script source code
+   * @return true if Script was properly set in RedisAI server
+   */
+  public boolean setScriptFile(String key, Device device, String scriptFile) {
+    try {
+      Script script = new Script(device);
+      script.readSourceFromFile(scriptFile);
+      return setScript(key, script);
+    } catch (IOException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.SCRIPTSET
+   *
+   * @param key name of key to store the Script in RedisAI server
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param source - the script source code
+   * @return true if Script was properly set in RedisAI server
+   */
+  public boolean setScript(String key, Device device, String source) {
+    try (Jedis conn = getConnection()) {
+      Script script = new Script(device, source);
+      List<byte[]> args = script.getScriptSetCommandBytes(key);
+      return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.SCRIPTSET
+   *
+   * @param key name of key to store the Script in RedisAI server
+   * @param script the Script Object
+   * @return true if Script was properly set in RedisAI server
+   */
+  public boolean setScript(String key, Script script) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = script.getScriptSetCommandBytes(key);
+      return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.SCRIPTGET
+   *
+   * @param key name of key to get the Script from RedisAI server
+   * @return Script
+   */
+  public Script getScript(String key) throws JRedisAIRunTimeException {
+    try (Jedis conn = getConnection()) {
+      List<?> reply =
+          sendCommand(
+                  conn,
+                  Command.SCRIPT_GET,
+                  SafeEncoder.encode(key),
+                  Keyword.META.getRaw(),
+                  Keyword.SOURCE.getRaw())
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return Script.createScriptFromRespReply(reply);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.SCRIPTDEL
+   *
+   * @param key name of key to delete the Script
+   * @return true if Script was properly delete in RedisAI server
+   */
+  public boolean delScript(String key) {
+
+    try (Jedis conn = getConnection()) {
+      return sendCommand(conn, Command.SCRIPT_DEL, SafeEncoder.encode(key))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /** AI.MODELRUN model_key INPUTS input_key1 ... OUTPUTS output_key1 ... */
+  public boolean runModel(String key, String[] inputs, String[] outputs) {
+
+    try (Jedis conn = getConnection()) {
+
+      List<byte[]> args = new ArrayList<>();
+      args.add(SafeEncoder.encode(key));
+
+      args.add(Keyword.INPUTS.getRaw());
+      for (String input : inputs) {
+        args.add(SafeEncoder.encode(input));
+      }
+
+      args.add(Keyword.OUTPUTS.getRaw());
+      for (String output : outputs) {
+        args.add(SafeEncoder.encode(output));
+      }
+
+      return sendCommand(conn, Command.MODEL_RUN, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /** AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ... */
+  public boolean runScript(String key, String function, String[] inputs, String[] outputs) {
+
+    try (Jedis conn = getConnection()) {
+
+      List<byte[]> args = new ArrayList<>();
+      args.add(SafeEncoder.encode(key));
+      args.add(SafeEncoder.encode(function));
+
+      args.add(Keyword.INPUTS.getRaw());
+      for (String input : inputs) {
+        args.add(SafeEncoder.encode(input));
+      }
+
+      args.add(Keyword.OUTPUTS.getRaw());
+      for (String output : outputs) {
+        args.add(SafeEncoder.encode(output));
+      }
+
+      return sendCommand(conn, Command.SCRIPT_RUN, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * AI.INFO <key> [RESETSTAT]
+   *
+   * @param key the key name of a model or script
+   * @return a map of attributes for the given model or script
+   */
+  public Map<String, Object> getInfo(String key) {
+    try (Jedis conn = getConnection()) {
+      List<Object> values =
+          sendCommand(conn, Command.INFO, SafeEncoder.encode(key)).getObjectMultiBulkReply();
+
+      Map<String, Object> infoMap = new HashMap<>(values.size());
+      for (int i = 0; i < values.size(); i += 2) {
+        Object val = values.get(i + 1);
+        if (val instanceof byte[]) {
+          val = SafeEncoder.encode((byte[]) val);
         }
+        infoMap.put(SafeEncoder.encode((byte[]) values.get(i)), val);
+      }
+      return infoMap;
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
     }
+  }
 
-    /**
-     * Direct mapping to AI.TENSORSET
-     *
-     * @param key    name of key to store the Tensor
-     * @param tensor Tensor object
-     * @return true if Tensor was properly set in RedisAI server
-     */
-    public boolean setTensor(String key, Tensor tensor) {
-        try (Jedis conn = getConnection()) {
-            List<byte[]> args = tensor.getTensorSetCommandBytes(key);
-            return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
-
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
+  /**
+   * AI.INFO <key> RESETSTAT resets all statistics associated with the key
+   *
+   * @param key the key name of a model or script
+   * @return
+   */
+  public boolean resetStat(String key) {
+    try (Jedis conn = getConnection()) {
+      return sendCommand(conn, Command.INFO, SafeEncoder.encode(key), Keyword.RESETSTAT.getRaw())
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
     }
+  }
 
-    /**
-     * Direct mapping to AI.TENSORGET
-     *
-     * @param key name of key to get the Tensor from
-     * @return Tensor
-     */
-    public Tensor getTensor(String key) throws JRedisAIRunTimeException {
-        try (Jedis conn = getConnection()) {
-            List<?> reply = sendCommand(conn, Command.TENSOR_GET, SafeEncoder.encode(key), Keyword.META.getRaw(), Keyword.VALUES.getRaw()).getObjectMultiBulkReply();
-            if (reply.isEmpty()) {
-                return null;
-            }
-            return Tensor.createTensorFromRespReply(reply);
-        }
+  private Jedis getConnection() {
+    return pool.getResource();
+  }
+
+  private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
+    BinaryClient client = conn.getClient();
+    client.sendCommand(command, args);
+    return client;
+  }
+
+  /**
+   * AI.CONFIG <BACKENDSPATH <path>>
+   *
+   * @return
+   */
+  public boolean setBackendsPath(String path) {
+    try (Jedis conn = getConnection()) {
+      return sendCommand(
+              conn, Command.CONFIG, Keyword.BACKENDSPATH.getRaw(), SafeEncoder.encode(path))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
     }
+  }
 
-    /**
-     * Direct mapping to AI.MODELSET
-     *
-     * @param key       name of key to store the Model
-     * @param backend   - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
-     * @param device    - the device that will execute the model. can be of CPU or GPU
-     * @param inputs    - one or more names of the model's input nodes (applicable only for TensorFlow models)
-     * @param outputs   - one or more names of the model's output nodes (applicable only for TensorFlow models)
-     * @param modelPath - the file path for the Protobuf-serialized model
-     * @return true if Model was properly set in RedisAI server
-     */
-    public boolean setModel(String key, Backend backend, Device device, String[] inputs, String[] outputs, String modelPath) {
-
-        try (Jedis conn = getConnection()) {
-            byte[] blob = Files.readAllBytes(Paths.get(modelPath));
-            Model model = new Model(backend, device, inputs, outputs, blob);
-            List<byte[]> args = model.getModelSetCommandBytes(key);
-            return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
-
-        } catch (JedisDataException | IOException ex) {
-            throw new RedisAIException(ex);
-        }
+  /**
+   * AI.CONFIG <LOADBACKEND <backend> <path>>
+   *
+   * @return
+   */
+  public boolean loadBackend(Backend backEnd, String path) {
+    try (Jedis conn = getConnection()) {
+      return sendCommand(
+              conn,
+              Command.CONFIG,
+              Keyword.LOADBACKEND.getRaw(),
+              backEnd.getRaw(),
+              SafeEncoder.encode(path))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex);
     }
-
-    /**
-     * Direct mapping to AI.MODELSET
-     *
-     * @param key   name of key to store the Model
-     * @param model Model object
-     * @return true if Model was properly set in RedisAI server
-     */
-    public boolean setModel(String key, Model model) {
-
-        try (Jedis conn = getConnection()) {
-            List<byte[]> args = model.getModelSetCommandBytes(key);
-            return sendCommand(conn, Command.MODEL_SET, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * Direct mapping to AI.MODELGET
-     *
-     * @param key name of key to get the Model from RedisAI server
-     * @return Model
-     */
-    public Model getModel(String key) throws JRedisAIRunTimeException {
-        try (Jedis conn = getConnection()) {
-            List<?> reply = sendCommand(conn, Command.MODEL_GET, SafeEncoder.encode(key), Keyword.META.getRaw(), Keyword.BLOB.getRaw()).getObjectMultiBulkReply();
-            if (reply.isEmpty()) {
-                return null;
-            }
-            return Model.createModelFromRespReply(reply);
-        }
-    }
-
-    /**
-     * Direct mapping to AI.MODELDEL
-     *
-     * @param key name of key to delete the Model
-     * @return true if Model was properly delete in RedisAI server
-     */
-    public boolean delModel(String key) {
-
-        try (Jedis conn = getConnection()) {
-            return sendCommand(conn, Command.MODEL_DEL, SafeEncoder.encode(key))
-                    .getStatusCodeReply().equals("OK");
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-
-    /**
-     * Direct mapping to AI.SCRIPTSET
-     *
-     * @param key        name of key to store the Script in RedisAI server
-     * @param device     - the device that will execute the model. can be of CPU or GPU
-     * @param scriptFile - the file path for the script source code
-     * @return true if Script was properly set in RedisAI server
-     */
-    public boolean setScriptFile(String key, Device device, String scriptFile) {
-        try {
-            Script script = new Script(device);
-            script.readSourceFromFile(scriptFile);
-            return setScript(key, script);
-        } catch (IOException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * Direct mapping to AI.SCRIPTSET
-     *
-     * @param key    name of key to store the Script in RedisAI server
-     * @param device - the device that will execute the model. can be of CPU or GPU
-     * @param source - the script source code
-     * @return true if Script was properly set in RedisAI server
-     */
-    public boolean setScript(String key, Device device, String source) {
-        try (Jedis conn = getConnection()) {
-            Script script = new Script(device, source);
-            List<byte[]> args = script.getScriptSetCommandBytes(key);
-            return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
-
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * Direct mapping to AI.SCRIPTSET
-     *
-     * @param key    name of key to store the Script in RedisAI server
-     * @param script the Script Object
-     * @return true if Script was properly set in RedisAI server
-     */
-    public boolean setScript(String key, Script script) {
-        try (Jedis conn = getConnection()) {
-            List<byte[]> args = script.getScriptSetCommandBytes(key);
-            return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
-
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * Direct mapping to AI.SCRIPTGET
-     *
-     * @param key name of key to get the Script from RedisAI server
-     * @return Script
-     */
-    public Script getScript(String key) throws JRedisAIRunTimeException {
-        try (Jedis conn = getConnection()) {
-            List<?> reply = sendCommand(conn, Command.SCRIPT_GET, SafeEncoder.encode(key), Keyword.META.getRaw(), Keyword.SOURCE.getRaw()).getObjectMultiBulkReply();
-            if (reply.isEmpty()) {
-                return null;
-            }
-            return Script.createScriptFromRespReply(reply);
-        }
-    }
-
-    /**
-     * Direct mapping to AI.SCRIPTDEL
-     *
-     * @param key name of key to delete the Script
-     * @return true if Script was properly delete in RedisAI server
-     */
-    public boolean delScript(String key) {
-
-        try (Jedis conn = getConnection()) {
-            return sendCommand(conn, Command.SCRIPT_DEL, SafeEncoder.encode(key))
-                    .getStatusCodeReply().equals("OK");
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * AI.MODELRUN model_key INPUTS input_key1 ... OUTPUTS output_key1 ...
-     */
-    public boolean runModel(String key, String[] inputs, String[] outputs) {
-
-        try (Jedis conn = getConnection()) {
-
-            List<byte[]> args = new ArrayList<>();
-            args.add(SafeEncoder.encode(key));
-
-            args.add(Keyword.INPUTS.getRaw());
-            for (String input : inputs) {
-                args.add(SafeEncoder.encode(input));
-            }
-
-            args.add(Keyword.OUTPUTS.getRaw());
-            for (String output : outputs) {
-                args.add(SafeEncoder.encode(output));
-            }
-
-            return sendCommand(conn, Command.MODEL_RUN, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
-
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ...
-     */
-    public boolean runScript(String key, String function, String[] inputs, String[] outputs) {
-
-        try (Jedis conn = getConnection()) {
-
-            List<byte[]> args = new ArrayList<>();
-            args.add(SafeEncoder.encode(key));
-            args.add(SafeEncoder.encode(function));
-
-            args.add(Keyword.INPUTS.getRaw());
-            for (String input : inputs) {
-                args.add(SafeEncoder.encode(input));
-            }
-
-            args.add(Keyword.OUTPUTS.getRaw());
-            for (String output : outputs) {
-                args.add(SafeEncoder.encode(output));
-            }
-
-            return sendCommand(conn, Command.SCRIPT_RUN, args.toArray(new byte[args.size()][]))
-                    .getStatusCodeReply().equals("OK");
-
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * AI.INFO <key> [RESETSTAT]
-     *
-     * @param key the key name of a model or script
-     * @return a map of attributes for the given model or script
-     */
-    public Map<String, Object> getInfo(String key) {
-        try (Jedis conn = getConnection()) {
-            List<Object> values = sendCommand(conn, Command.INFO, SafeEncoder.encode(key)).getObjectMultiBulkReply();
-
-            Map<String, Object> infoMap = new HashMap<>(values.size());
-            for (int i = 0; i < values.size(); i += 2) {
-                Object val = values.get(i + 1);
-                if (val instanceof byte[]) {
-                    val = SafeEncoder.encode((byte[]) val);
-                }
-                infoMap.put(SafeEncoder.encode((byte[]) values.get(i)), val);
-            }
-            return infoMap;
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * AI.INFO <key> RESETSTAT
-     * resets all statistics associated with the key
-     *
-     * @param key the key name of a model or script
-     * @return
-     */
-    public boolean resetStat(String key) {
-        try (Jedis conn = getConnection()) {
-            return sendCommand(conn, Command.INFO, SafeEncoder.encode(key), Keyword.RESETSTAT.getRaw())
-                    .getStatusCodeReply().equals("OK");
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    private Jedis getConnection() {
-        return pool.getResource();
-    }
-
-    private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
-        BinaryClient client = conn.getClient();
-        client.sendCommand(command, args);
-        return client;
-    }
-
-    /**
-     * AI.CONFIG <BACKENDSPATH <path>>
-     *
-     * @return
-     */
-    public boolean setBackendsPath(String path) {
-        try (Jedis conn = getConnection()) {
-            return sendCommand(conn, Command.CONFIG, Keyword.BACKENDSPATH.getRaw(), SafeEncoder.encode(path))
-                    .getStatusCodeReply().equals("OK");
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
-    /**
-     * AI.CONFIG <LOADBACKEND <backend> <path>>
-     *
-     * @return
-     */
-    public boolean loadBackend(Backend backEnd, String path) {
-        try (Jedis conn = getConnection()) {
-            return sendCommand(conn, Command.CONFIG, Keyword.LOADBACKEND.getRaw(), backEnd.getRaw(), SafeEncoder.encode(path))
-                    .getStatusCodeReply().equals("OK");
-        } catch (JedisDataException ex) {
-            throw new RedisAIException(ex);
-        }
-    }
-
+  }
 }
