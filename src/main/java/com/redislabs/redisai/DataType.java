@@ -139,10 +139,10 @@ public enum DataType implements ProtocolCommand {
     throw new IllegalArgumentException("cannot create Tensors of type " + c.getName());
   }
 
-  private static List<byte[]> toByteArray(Object obj, long[] dimensions, long dim, DataType type) {
+  private static List<byte[]> toByteArray(Object obj, long[] dimensions, int dim, DataType type) {
     ArrayList<byte[]> res = new ArrayList<>();
-    if (dimensions.length > dim + 1) {
-      long dimension = dimensions[(int) dim++];
+    if (dimensions.length > ((long) dim + 1)) {
+      long dimension = dimensions[dim++];
       for (int i = 0; i < dimension; ++i) {
         Object value = Array.get(obj, i);
         res.addAll(toByteArray(value, dimensions, dim, type));
