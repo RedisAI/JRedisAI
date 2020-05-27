@@ -37,14 +37,41 @@ public class Model {
     this.minBatchSize = 0;
   }
 
+  /**
+   * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param inputs - one or more names of the model's input nodes (applicable only for TensorFlow
+   *     models)
+   * @param outputs - one or more names of the model's output nodes (applicable only for TensorFlow
+   *     models)
+   * @param blob - the Protobuf-serialized model
+   * @param batchSize - when provided with an batchsize that is greater than 0, the engine will
+   *     batch incoming requests from multiple clients that use the model with input tensors of the
+   *     same shape.
+   * @param minBatchSize - when provided with an minbatchsize that is greater than 0, the engine
+   *     will postpone calls to AI.MODELRUN until the batch's size had reached minbatchsize
+   */
+  public Model(
+      Backend backend,
+      Device device,
+      String[] inputs,
+      String[] outputs,
+      byte[] blob,
+      long batchSize,
+      long minBatchSize) {
+    this(backend, device, inputs, outputs, blob);
+    this.batchSize = batchSize;
+    this.minBatchSize = minBatchSize;
+  }
+
   public static Model createModelFromRespReply(List<?> reply) {
     Model model = null;
     Backend backend = null;
     Device device = null;
     String tag = null;
     byte[] blob = null;
-    long batchsize = -1;
-    long minbatchsize = -1;
+    long batchsize = 0;
+    long minbatchsize = 0;
     String[] inputs = new String[0];
     String[] outputs = new String[0];
     for (int i = 0; i < reply.size(); i += 2) {
@@ -99,15 +126,9 @@ public class Model {
       }
     }
     if (backend != null && device != null && blob != null) {
-      model = new Model(backend, device, inputs, outputs, blob);
+      model = new Model(backend, device, inputs, outputs, blob, batchsize, minbatchsize);
       if (tag != null) {
         model.setTag(tag);
-      }
-      if (batchsize > -1) {
-        model.setBatchSize(batchsize);
-      }
-      if (minbatchsize > -1) {
-        model.setMinBatchSize(minbatchsize);
       }
     }
     return model;
