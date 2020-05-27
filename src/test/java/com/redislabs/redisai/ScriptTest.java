@@ -1,15 +1,32 @@
 package com.redislabs.redisai;
 
+import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.util.SafeEncoder;
 
 public class ScriptTest {
+
+  private final JedisPool pool = new JedisPool();
+  private final RedisAI redisaiClient = new RedisAI(pool);
+
+  @Before
+  public void flushAI() {
+    try (Jedis conn = pool.getResource()) {
+      conn.flushAll();
+    }
+  }
 
   @Test
   public void setGetDevice() {
@@ -63,5 +80,25 @@ public class ScriptTest {
     Script scriptC2 = new Script(Device.GPU, scriptFilePath);
     Assert.assertEquals(script.getSource(), scriptC2.getSource());
     Assert.assertEquals(scriptC1.getSource(), scriptC2.getSource());
+  }
+
+  @Test
+  public void createScriptFromRespReply() {
+    // negative testing
+    try {
+      Jedis conn = pool.getResource();
+      BinaryClient vanillaClient = conn.getClient();
+      String key = "negativeTest:parser:script";
+      String script = "def bar(a, b):\n" + "    return a + b\n";
+      Assert.assertTrue(redisaiClient.setScript(key, Device.CPU, script));
+
+      vanillaClient.sendCommand(Command.SCRIPT_GET, SafeEncoder.encode(key), Keyword.META.getRaw());
+      List<?> reply = vanillaClient.getObjectMultiBulkReply();
+      Script.createScriptFromRespReply(reply);
+      Assert.fail("Should throw JRedisAIRunTimeException or JedisDataException");
+    } catch (JRedisAIRunTimeException e) {
+      Assert.assertEquals(
+          "AI.SCRIPTGET reply did not contained all elements to build the script", e.getMessage());
+    }
   }
 }

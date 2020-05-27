@@ -85,6 +85,9 @@ public class Script {
       if (tag != null) {
         script.setTag(tag);
       }
+    } else {
+      throw new JRedisAIRunTimeException(
+          "AI.SCRIPTGET reply did not contained all elements to build the script");
     }
     return script;
   }

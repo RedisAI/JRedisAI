@@ -64,6 +64,9 @@ public class Tensor {
     }
     if (dtype != null && shape != null && values != null) {
       tensor = new Tensor(dtype, shape, values);
+    } else {
+      throw new JRedisAIRunTimeException(
+          "AI.TENSORGET reply did not contained all elements to build the tensor");
     }
     return tensor;
   }

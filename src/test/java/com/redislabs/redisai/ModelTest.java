@@ -1,9 +1,26 @@
 package com.redislabs.redisai;
 
+import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
+import java.util.List;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.util.SafeEncoder;
 
 public class ModelTest {
+
+  private final JedisPool pool = new JedisPool();
+  private final RedisAI redisaiClient = new RedisAI(pool);
+
+  @Before
+  public void flushAI() {
+    try (Jedis conn = pool.getResource()) {
+      conn.flushAll();
+    }
+  }
 
   @Test
   public void getSetTag() {
@@ -85,5 +102,28 @@ public class ModelTest {
     model.setMinBatchSize(10);
     minbatchsize = model.getMinBatchSize();
     Assert.assertEquals(10, minbatchsize);
+  }
+
+  @Test
+  public void createModelFromRespReply() {
+    // negative testing
+    try {
+      Jedis conn = pool.getResource();
+      BinaryClient vanillaClient = conn.getClient();
+      String key = "negativeTest:parser:model";
+      ClassLoader classLoader = getClass().getClassLoader();
+      String model = classLoader.getResource("test_data/graph.pb").getFile();
+      Assert.assertTrue(
+          redisaiClient.setModel(
+              key, Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, model));
+
+      vanillaClient.sendCommand(Command.MODEL_GET, SafeEncoder.encode(key), Keyword.META.getRaw());
+      List<?> reply = vanillaClient.getObjectMultiBulkReply();
+      Model.createModelFromRespReply(reply);
+      Assert.fail("Should throw JRedisAIRunTimeException or JedisDataException");
+    } catch (JRedisAIRunTimeException e) {
+      Assert.assertEquals(
+          "AI.MODELGET reply did not contained all elements to build the model", e.getMessage());
+    }
   }
 }

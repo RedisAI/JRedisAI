@@ -130,6 +130,9 @@ public class Model {
       if (tag != null) {
         model.setTag(tag);
       }
+    } else {
+      throw new JRedisAIRunTimeException(
+          "AI.MODELGET reply did not contained all elements to build the model");
     }
     return model;
   }
