@@ -27,14 +27,7 @@ public class Model {
    * @param blob - the Protobuf-serialized model
    */
   public Model(Backend backend, Device device, String[] inputs, String[] outputs, byte[] blob) {
-    this.backend = backend;
-    this.device = device;
-    this.inputs = inputs;
-    this.outputs = outputs;
-    this.blob = blob;
-    this.tag = null;
-    this.batchSize = 0;
-    this.minBatchSize = 0;
+    this(backend, device, inputs, outputs, blob, 0, 0);
   }
 
   /**
@@ -59,7 +52,12 @@ public class Model {
       byte[] blob,
       long batchSize,
       long minBatchSize) {
-    this(backend, device, inputs, outputs, blob);
+    this.backend = backend;
+    this.device = device;
+    this.inputs = inputs;
+    this.outputs = outputs;
+    this.blob = blob;
+    this.tag = null;
     this.batchSize = batchSize;
     this.minBatchSize = minBatchSize;
   }
@@ -125,14 +123,13 @@ public class Model {
           break;
       }
     }
-    if (backend != null && device != null && blob != null) {
-      model = new Model(backend, device, inputs, outputs, blob, batchsize, minbatchsize);
-      if (tag != null) {
-        model.setTag(tag);
-      }
-    } else {
+    if (backend == null || device == null || blob == null) {
       throw new JRedisAIRunTimeException(
           "AI.MODELGET reply did not contained all elements to build the model");
+    }
+    model = new Model(backend, device, inputs, outputs, blob, batchsize, minbatchsize);
+    if (tag != null) {
+      model.setTag(tag);
     }
     return model;
   }

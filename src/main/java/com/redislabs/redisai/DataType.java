@@ -141,7 +141,7 @@ public enum DataType implements ProtocolCommand {
 
   private static List<byte[]> toByteArray(Object obj, long[] dimensions, int dim, DataType type) {
     ArrayList<byte[]> res = new ArrayList<>();
-    if (dimensions.length > ((long) dim + 1)) {
+    if (dimensions.length - 1 > dim) {
       long dimension = dimensions[dim++];
       for (int i = 0; i < dimension; ++i) {
         Object value = Array.get(obj, i);
