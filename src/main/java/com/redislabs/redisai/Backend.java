@@ -5,7 +5,9 @@ import redis.clients.jedis.util.SafeEncoder;
 
 public enum Backend implements ProtocolCommand {
   TF,
-  TORCH;
+  TORCH,
+  TFLITE,
+  ONNX;
 
   private final byte[] raw;
 

@@ -88,42 +88,7 @@ public enum DataType implements ProtocolCommand {
       }
       return values;
     }
-  },
-  STRING {
-    @Override
-    public List<byte[]> toByteArray(Object obj) {
-      byte[] values = (byte[]) obj;
-      List<byte[]> res = new ArrayList<>(values.length);
-      for (byte value : values) {
-        res.add(Protocol.toByteArray(value));
-      }
-      return res;
-    }
-
-    @Override
-    protected Object toObject(List<byte[]> data) {
-      return data;
-    }
-  },
-  BOOL {
-    @Override
-    public List<byte[]> toByteArray(Object obj) {
-      boolean[] values = (boolean[]) obj;
-      List<byte[]> res = new ArrayList<>(values.length);
-      for (boolean value : values) {
-        res.add(Protocol.toByteArray(value));
-      }
-      return res;
-    }
-
-    @Override
-    protected Object toObject(List<byte[]> data) {
-      // TODO Auto-generated method stub
-      return null;
-    }
   };
-
-  private final byte[] raw;
 
   private static final HashMap<Class<?>, DataType> classDataTypes = new HashMap<>();
 
@@ -136,11 +101,9 @@ public enum DataType implements ProtocolCommand {
     classDataTypes.put(Float.class, DataType.FLOAT);
     classDataTypes.put(double.class, DataType.DOUBLE);
     classDataTypes.put(Double.class, DataType.DOUBLE);
-    classDataTypes.put(byte.class, DataType.STRING);
-    classDataTypes.put(Byte.class, DataType.STRING);
-    classDataTypes.put(boolean.class, DataType.BOOL);
-    classDataTypes.put(Boolean.class, DataType.BOOL);
   }
+
+  private final byte[] raw;
 
   DataType() {
     raw = SafeEncoder.encode(this.name());
@@ -163,18 +126,6 @@ public enum DataType implements ProtocolCommand {
     return dt;
   }
 
-  protected abstract List<byte[]> toByteArray(Object obj);
-
-  protected abstract Object toObject(List<byte[]> data);
-
-  public byte[] getRaw() {
-    return raw;
-  }
-
-  public List<byte[]> toByteArray(Object obj, int[] dimensions) {
-    return toByteArray(obj, dimensions, 0, this);
-  }
-
   /** The class for the data type to which Java object o corresponds. */
   public static DataType baseObjType(Object o) {
     Class<?> c = o.getClass();
@@ -188,10 +139,10 @@ public enum DataType implements ProtocolCommand {
     throw new IllegalArgumentException("cannot create Tensors of type " + c.getName());
   }
 
-  private static List<byte[]> toByteArray(Object obj, int[] dimensions, int dim, DataType type) {
+  private static List<byte[]> toByteArray(Object obj, long[] dimensions, int dim, DataType type) {
     ArrayList<byte[]> res = new ArrayList<>();
-    if (dimensions.length > dim + 1) {
-      int dimension = dimensions[dim++];
+    if (dimensions.length - 1 > dim) {
+      long dimension = dimensions[dim++];
       for (int i = 0; i < dimension; ++i) {
         Object value = Array.get(obj, i);
         res.addAll(toByteArray(value, dimensions, dim, type));
@@ -200,5 +151,17 @@ public enum DataType implements ProtocolCommand {
       res.addAll(type.toByteArray(obj));
     }
     return res;
+  }
+
+  protected abstract List<byte[]> toByteArray(Object obj);
+
+  protected abstract Object toObject(List<byte[]> data);
+
+  public byte[] getRaw() {
+    return raw;
+  }
+
+  public List<byte[]> toByteArray(Object obj, long[] dimensions) {
+    return toByteArray(obj, dimensions, 0, this);
   }
 }
