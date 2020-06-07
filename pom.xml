@@ -11,7 +11,7 @@
 	<packaging>jar</packaging>
 	<groupId>com.redislabs</groupId>
 	<artifactId>jredisai</artifactId>
-	<version>0.7.0-SNAPSHOT</version>
+	<version>0.9.0-SNAPSHOT</version>
 	<name>JRedisAI</name>
 	<description>Java Client for RedisAI.</description>
 	<url>https://github.com/RedisAI/JRedisAI</url>
