@@ -128,8 +128,9 @@ public class RedisAI {
    *
    * @param key name of key to get the Tensor from
    * @return Tensor
+   * @throws JRedisAIRunTimeException
    */
-  public Tensor getTensor(String key) throws JRedisAIRunTimeException {
+  public Tensor getTensor(String key) {
     try (Jedis conn = getConnection()) {
       List<?> reply =
           sendCommand(
@@ -200,8 +201,9 @@ public class RedisAI {
    *
    * @param key name of key to get the Model from RedisAI server
    * @return Model
+   * @throws JRedisAIRunTimeException
    */
-  public Model getModel(String key) throws JRedisAIRunTimeException {
+  public Model getModel(String key) {
     try (Jedis conn = getConnection()) {
       List<?> reply =
           sendCommand(
@@ -289,8 +291,9 @@ public class RedisAI {
    *
    * @param key name of key to get the Script from RedisAI server
    * @return Script
+   * @throws JRedisAIRunTimeException
    */
-  public Script getScript(String key) throws JRedisAIRunTimeException {
+  public Script getScript(String key) {
     try (Jedis conn = getConnection()) {
       List<?> reply =
           sendCommand(
