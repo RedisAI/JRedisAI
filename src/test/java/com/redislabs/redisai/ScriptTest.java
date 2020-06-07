@@ -42,10 +42,10 @@ public class ScriptTest {
   public void setGetSource() {
     Script script = new Script(Device.GPU);
     String source = script.getSource();
-    Assert.assertEquals(source, "");
+    Assert.assertEquals("", source);
     script.setSource("def func a:");
     source = script.getSource();
-    Assert.assertEquals(source, "def func a:");
+    Assert.assertEquals("def func a:", source);
   }
 
   @Test
@@ -55,7 +55,7 @@ public class ScriptTest {
     Assert.assertEquals(null, tag);
     script.setTag("tagExample");
     tag = script.getTag();
-    Assert.assertEquals(tag, "tagExample");
+    Assert.assertEquals("tagExample", tag);
   }
 
   @Test
