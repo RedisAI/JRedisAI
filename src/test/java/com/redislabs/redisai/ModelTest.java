@@ -29,7 +29,7 @@ public class ModelTest {
     Assert.assertEquals(null, tag);
     model.setTag("tagExample");
     tag = model.getTag();
-    Assert.assertEquals(tag, "tagExample");
+    Assert.assertEquals("tagExample", tag);
   }
 
   @Test

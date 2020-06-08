@@ -50,7 +50,7 @@ public class TensorTest {
   public void getDataType() {
     Tensor tensor = new Tensor(DataType.INT32, new long[] {1, 2}, new int[] {3, 4});
     DataType dtype = tensor.getDataType();
-    Assert.assertEquals(dtype, DataType.INT32);
+    Assert.assertEquals(DataType.INT32, dtype);
   }
 
   @Test
@@ -58,7 +58,7 @@ public class TensorTest {
     Tensor tensor = new Tensor(DataType.INT32, new long[] {1, 2}, new int[] {3, 4});
     tensor.setDataType(DataType.INT64);
     DataType dtype = tensor.getDataType();
-    Assert.assertEquals(dtype, DataType.INT64);
+    Assert.assertEquals(DataType.INT64, dtype);
   }
 
   @Test

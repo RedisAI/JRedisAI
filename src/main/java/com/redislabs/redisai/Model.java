@@ -103,7 +103,7 @@ public class Model {
           break;
         case "inputs":
           List<byte[]> inputsEncoded = (List<byte[]>) reply.get(i + 1);
-          if (inputsEncoded.size() > 0) {
+          if (!inputsEncoded.isEmpty()) {
             inputs = new String[inputsEncoded.size()];
             for (int j = 0; j < inputsEncoded.size(); j++) {
               inputs[j] = SafeEncoder.encode(inputsEncoded.get(j));
@@ -112,7 +112,7 @@ public class Model {
           break;
         case "outputs":
           List<byte[]> outputsEncoded = (List<byte[]>) reply.get(i + 1);
-          if (outputsEncoded.size() > 0) {
+          if (!outputsEncoded.isEmpty()) {
             outputs = new String[outputsEncoded.size()];
             for (int j = 0; j < outputsEncoded.size(); j++) {
               outputs[j] = SafeEncoder.encode(outputsEncoded.get(j));
