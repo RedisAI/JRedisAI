@@ -1,6 +1,7 @@
 package com.redislabs.redisai;
 
 import java.util.List;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,13 +18,13 @@ public class DagTest {
       conn.flushAll();
     }
   }
-  //
-  //    @After
-  //    public void tearDown(){
-  //        try (Jedis conn = pool.getResource()) {
-  //            conn.flushAll();
-  //        }
-  //    }
+
+  @After
+  public void tearDown() {
+    try (Jedis conn = pool.getResource()) {
+      conn.flushAll();
+    }
+  }
 
   /** ai.dagrun simple modelrun tensorget positive testing with load clause */
   @Test

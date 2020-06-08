@@ -2,17 +2,15 @@ package com.redislabs.redisai;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.ArrayUtils;
 import redis.clients.jedis.util.SafeEncoder;
 
 public class Dag implements DagRunCommands {
-  List<List<byte[]>> commands;
-  List<Boolean> tensorgetflag;
+  private final List<List<byte[]>> commands = new ArrayList<>();
+  private final List<Boolean> tensorgetflag = new ArrayList<>();
 
   /** Direct acyclic graph of operations to run within RedisAI */
-  public Dag() {
-    this.commands = new ArrayList<>();
-    this.tensorgetflag = new ArrayList<>();
-  }
+  public Dag() {}
 
   protected List<?> processDagReply(List<?> reply) {
     List<Object> outputList = new ArrayList<>(reply.size());
@@ -56,14 +54,14 @@ public class Dag implements DagRunCommands {
 
   List<byte[]> dagRunFlatArgs(String[] loadKeys, String[] persistKeys) {
     List<byte[]> args = new ArrayList<>();
-    if (loadKeys != null && loadKeys.length > 0) {
+    if (ArrayUtils.isNotEmpty(loadKeys)) {
       args.add(Keyword.LOAD.getRaw());
       args.add(SafeEncoder.encode(String.valueOf(loadKeys.length)));
       for (String key : loadKeys) {
         args.add(SafeEncoder.encode(key));
       }
     }
-    if (persistKeys != null && persistKeys.length > 0) {
+    if (ArrayUtils.isNotEmpty(persistKeys)) {
       args.add(Keyword.PERSIST.getRaw());
       args.add(SafeEncoder.encode(String.valueOf(persistKeys.length)));
       for (String key : persistKeys) {
@@ -71,7 +69,7 @@ public class Dag implements DagRunCommands {
       }
     }
     for (List<byte[]> command : this.commands) {
-      args.add(SafeEncoder.encode("|>"));
+      args.add(Keyword.PIPE.getRaw());
       args.addAll(command);
     }
     return args;
