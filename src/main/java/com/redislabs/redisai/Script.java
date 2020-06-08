@@ -147,4 +147,24 @@ public class Script {
                 .collect(Collectors.joining("\n"))
             + "\n";
   }
+
+  protected static List<byte[]> scriptRunFlatArgs(
+      String key, String function, String[] inputs, String[] outputs, boolean includeCommandName) {
+    List<byte[]> args = new ArrayList<>();
+    if (includeCommandName) {
+      args.add(Command.SCRIPT_RUN.getRaw());
+    }
+    args.add(SafeEncoder.encode(key));
+    args.add(SafeEncoder.encode(function));
+    args.add(Keyword.INPUTS.getRaw());
+    for (String input : inputs) {
+      args.add(SafeEncoder.encode(input));
+    }
+
+    args.add(Keyword.OUTPUTS.getRaw());
+    for (String output : outputs) {
+      args.add(SafeEncoder.encode(output));
+    }
+    return args;
+  }
 }

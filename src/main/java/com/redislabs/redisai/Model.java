@@ -233,4 +233,24 @@ public class Model {
     args.add(blob);
     return args;
   }
+
+  protected static List<byte[]> modelRunFlatArgs(
+      String key, String[] inputs, String[] outputs, boolean includeCommandName) {
+    List<byte[]> args = new ArrayList<>();
+    if (includeCommandName) {
+      args.add(Command.MODEL_RUN.getRaw());
+    }
+    args.add(SafeEncoder.encode(key));
+
+    args.add(Keyword.INPUTS.getRaw());
+    for (String input : inputs) {
+      args.add(SafeEncoder.encode(input));
+    }
+
+    args.add(Keyword.OUTPUTS.getRaw());
+    for (String output : outputs) {
+      args.add(SafeEncoder.encode(output));
+    }
+    return args;
+  }
 }

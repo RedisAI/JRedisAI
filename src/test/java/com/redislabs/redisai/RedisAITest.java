@@ -253,7 +253,6 @@ public class RedisAITest {
   public void testSetScript() {
     String script = "def bar(a, b):\n" + "    return a + b\n";
     Assert.assertTrue(client.setScript("script", Device.CPU, script));
-    //    client.getScript("script");
   }
 
   @Test

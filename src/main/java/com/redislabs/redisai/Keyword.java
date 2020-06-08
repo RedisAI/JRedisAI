@@ -16,7 +16,9 @@ public enum Keyword implements ProtocolCommand {
   BATCHSIZE,
   MINBATCHSIZE,
   BACKENDSPATH,
-  LOADBACKEND;
+  LOADBACKEND,
+  LOAD,
+  PERSIST;
 
   private final byte[] raw;
 
