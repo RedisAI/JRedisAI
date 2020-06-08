@@ -112,7 +112,7 @@ public class RedisAI {
    */
   public boolean setTensor(String key, Tensor tensor) {
     try (Jedis conn = getConnection()) {
-      List<byte[]> args = tensor.getTensorSetCommandBytes(key, false);
+      List<byte[]> args = tensor.tensorSetFlatArgs(key, false);
       return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
           .getStatusCodeReply()
           .equals("OK");

@@ -97,7 +97,7 @@ public class Tensor {
    * @param key name of key to store the Model
    * @return
    */
-  protected List<byte[]> getTensorSetCommandBytes(String key, boolean includeCommandName) {
+  protected List<byte[]> tensorSetFlatArgs(String key, boolean includeCommandName) {
     List<byte[]> args = new ArrayList<>();
     if (includeCommandName) {
       args.add(Command.TENSOR_SET.getRaw());

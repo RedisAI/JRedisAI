@@ -28,7 +28,7 @@ public class Dag implements DagRunCommands {
 
   @Override
   public void setTensor(String key, Tensor tensor) {
-    List<byte[]> args = tensor.getTensorSetCommandBytes(key, true);
+    List<byte[]> args = tensor.tensorSetFlatArgs(key, true);
     this.commands.add(args);
     this.tensorgetflag.add(false);
   }
