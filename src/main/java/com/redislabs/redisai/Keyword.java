@@ -4,30 +4,26 @@ import redis.clients.jedis.commands.ProtocolCommand;
 import redis.clients.jedis.util.SafeEncoder;
 
 public enum Keyword implements ProtocolCommand {
-  INPUTS,
-  OUTPUTS,
-  META,
-  VALUES,
-  BLOB,
-  SOURCE,
-  RESETSTAT,
-  TAG,
-  BATCHSIZE,
-  MINBATCHSIZE,
-  BACKENDSPATH,
-  LOADBACKEND,
-  LOAD,
-  PERSIST,
-  PIPE;
+  INPUTS("INPUTS"),
+  OUTPUTS("OUTPUTS"),
+  META("META"),
+  VALUES("VALUES"),
+  BLOB("BLOB"),
+  SOURCE("SOURCE"),
+  RESETSTAT("RESETSTAT"),
+  TAG("TAG"),
+  BATCHSIZE("BATCHSIZE"),
+  MINBATCHSIZE("MINBATCHSIZE"),
+  BACKENDSPATH("BACKENDSPATH"),
+  LOADBACKEND("LOADBACKEND"),
+  LOAD("LOAD"),
+  PERSIST("PERSIST"),
+  PIPE("|>");
 
   private final byte[] raw;
 
-  Keyword() {
-    if (this.name() == "PIPE") {
-      raw = SafeEncoder.encode("|>");
-    } else {
-      raw = SafeEncoder.encode(this.name());
-    }
+  Keyword(String s) {
+    raw = SafeEncoder.encode(s);
   }
 
   public byte[] getRaw() {

@@ -2,7 +2,6 @@ package com.redislabs.redisai;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.lang3.ArrayUtils;
 import redis.clients.jedis.util.SafeEncoder;
 
 public class Dag implements DagRunCommands<Dag> {
@@ -58,14 +57,14 @@ public class Dag implements DagRunCommands<Dag> {
 
   List<byte[]> dagRunFlatArgs(String[] loadKeys, String[] persistKeys) {
     List<byte[]> args = new ArrayList<>();
-    if (ArrayUtils.isNotEmpty(loadKeys)) {
+    if (loadKeys != null && loadKeys.length > 0) {
       args.add(Keyword.LOAD.getRaw());
       args.add(SafeEncoder.encode(String.valueOf(loadKeys.length)));
       for (String key : loadKeys) {
         args.add(SafeEncoder.encode(key));
       }
     }
-    if (ArrayUtils.isNotEmpty(persistKeys)) {
+    if (persistKeys != null && persistKeys.length > 0) {
       args.add(Keyword.PERSIST.getRaw());
       args.add(SafeEncoder.encode(String.valueOf(persistKeys.length)));
       for (String key : persistKeys) {
