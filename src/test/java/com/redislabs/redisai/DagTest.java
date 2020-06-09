@@ -159,4 +159,46 @@ public class DagTest {
     Assert.assertEquals("Assert same shape of values", 2, valuesSum.length);
     Assert.assertArrayEquals(expectedSum, valuesSum, (float) 0.1);
   }
+
+  /** ai.dagrun test with tensorset modelrun tensorget scriptrun tensorget */
+  @Test
+  public void dagRunWithAllCommandsChained() {
+    ClassLoader classLoader = getClass().getClassLoader();
+    String model = classLoader.getResource("test_data/graph.pb").getFile();
+    String[] inputs = new String[] {"a", "b"};
+    String[] outputs = new String[] {"mul"};
+    Assert.assertTrue(client.setModel("mul", Backend.TF, Device.CPU, inputs, outputs, model));
+
+    String scriptFile = classLoader.getResource("test_data/script.txt").getFile();
+    Assert.assertTrue(client.setScriptFile("script", Device.CPU, scriptFile));
+    Dag dag = new Dag();
+
+    String keyA = "tensorA";
+    String keyB = "tensorB";
+    String keyC = "tensorC";
+    String keyD = "tensorD";
+    String keyE = "tensorE";
+    Tensor tA = new Tensor(DataType.FLOAT, new long[] {1, 2}, new float[][] {{1, 2}});
+    Tensor tB = new Tensor(DataType.FLOAT, new long[] {1, 2}, new float[][] {{2, 3}});
+    Tensor tD = new Tensor(DataType.FLOAT, new long[] {1, 2}, new float[][] {{5, 5}});
+    dag.setTensor(keyA, tA)
+        .setTensor(keyB, tB)
+        .setTensor(keyD, tD)
+        .runModel("mul", new String[] {keyA, keyB}, new String[] {keyC})
+        .getTensor(keyC)
+        .runScript("script", "bar", new String[] {keyC, keyD}, new String[] {keyE})
+        .getTensor(keyE);
+    List<?> result = client.dagRun(null, null, dag);
+    float[] expected = new float[] {2, 6};
+    Tensor tensorC = (Tensor) result.get(4);
+    float[] values = (float[]) tensorC.getValues();
+    Assert.assertEquals("Assert same shape of values", 2, values.length);
+    Assert.assertArrayEquals(expected, values, (float) 0.1);
+
+    float[] expectedSum = new float[] {7, 11};
+    Tensor tensorE = (Tensor) result.get(6);
+    float[] valuesSum = (float[]) tensorE.getValues();
+    Assert.assertEquals("Assert same shape of values", 2, valuesSum.length);
+    Assert.assertArrayEquals(expectedSum, valuesSum, (float) 0.1);
+  }
 }

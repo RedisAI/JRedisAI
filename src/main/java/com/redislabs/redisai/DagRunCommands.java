@@ -1,11 +1,11 @@
 package com.redislabs.redisai;
 
-interface DagRunCommands {
-  void setTensor(String key, Tensor tensor);
+interface DagRunCommands<T> {
+  T setTensor(String key, Tensor tensor);
 
-  void getTensor(String key);
+  T getTensor(String key);
 
-  void runModel(String key, String[] inputs, String[] outputs);
+  T runModel(String key, String[] inputs, String[] outputs);
 
-  void runScript(String key, String function, String[] inputs, String[] outputs);
+  T runScript(String key, String function, String[] inputs, String[] outputs);
 }

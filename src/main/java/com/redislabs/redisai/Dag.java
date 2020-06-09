@@ -5,7 +5,7 @@ import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import redis.clients.jedis.util.SafeEncoder;
 
-public class Dag implements DagRunCommands {
+public class Dag implements DagRunCommands<Dag> {
   private final List<List<byte[]>> commands = new ArrayList<>();
   private final List<Boolean> tensorgetflag = new ArrayList<>();
 
@@ -15,7 +15,7 @@ public class Dag implements DagRunCommands {
   protected List<?> processDagReply(List<?> reply) {
     List<Object> outputList = new ArrayList<>(reply.size());
     for (int i = 0; i < reply.size(); i++) {
-      if (this.tensorgetflag.get(i) == true) {
+      if (this.tensorgetflag.get(i)) {
         outputList.add(Tensor.createTensorFromRespReply((List<?>) reply.get(i)));
       } else {
         outputList.add(reply.get(i));
@@ -25,31 +25,35 @@ public class Dag implements DagRunCommands {
   }
 
   @Override
-  public void setTensor(String key, Tensor tensor) {
+  public Dag setTensor(String key, Tensor tensor) {
     List<byte[]> args = tensor.tensorSetFlatArgs(key, true);
     this.commands.add(args);
     this.tensorgetflag.add(false);
+    return this;
   }
 
   @Override
-  public void getTensor(String key) {
+  public Dag getTensor(String key) {
     List<byte[]> args = Tensor.tensorGetFlatArgs(key, true);
     this.commands.add(args);
     this.tensorgetflag.add(true);
+    return this;
   }
 
   @Override
-  public void runModel(String key, String[] inputs, String[] outputs) {
+  public Dag runModel(String key, String[] inputs, String[] outputs) {
     List<byte[]> args = Model.modelRunFlatArgs(key, inputs, outputs, true);
     this.commands.add(args);
     this.tensorgetflag.add(false);
+    return this;
   }
 
   @Override
-  public void runScript(String key, String function, String[] inputs, String[] outputs) {
+  public Dag runScript(String key, String function, String[] inputs, String[] outputs) {
     List<byte[]> args = Script.scriptRunFlatArgs(key, function, inputs, outputs, true);
     this.commands.add(args);
     this.tensorgetflag.add(false);
+    return this;
   }
 
   List<byte[]> dagRunFlatArgs(String[] loadKeys, String[] persistKeys) {
