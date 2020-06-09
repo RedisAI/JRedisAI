@@ -4,7 +4,6 @@ import redis.clients.jedis.commands.ProtocolCommand;
 import redis.clients.jedis.util.SafeEncoder;
 
 public enum Keyword implements ProtocolCommand {
-  TENSOR,
   INPUTS,
   OUTPUTS,
   META,
@@ -16,12 +15,19 @@ public enum Keyword implements ProtocolCommand {
   BATCHSIZE,
   MINBATCHSIZE,
   BACKENDSPATH,
-  LOADBACKEND;
+  LOADBACKEND,
+  LOAD,
+  PERSIST,
+  PIPE("|>");
 
   private final byte[] raw;
 
   Keyword() {
     raw = SafeEncoder.encode(this.name());
+  }
+
+  Keyword(String encodeStr) {
+    raw = SafeEncoder.encode(encodeStr);
   }
 
   public byte[] getRaw() {

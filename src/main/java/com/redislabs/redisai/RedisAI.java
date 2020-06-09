@@ -4,7 +4,6 @@ import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +112,7 @@ public class RedisAI {
    */
   public boolean setTensor(String key, Tensor tensor) {
     try (Jedis conn = getConnection()) {
-      List<byte[]> args = tensor.getTensorSetCommandBytes(key);
+      List<byte[]> args = tensor.tensorSetFlatArgs(key, false);
       return sendCommand(conn, Command.TENSOR_SET, args.toArray(new byte[args.size()][]))
           .getStatusCodeReply()
           .equals("OK");
@@ -132,13 +131,9 @@ public class RedisAI {
    */
   public Tensor getTensor(String key) {
     try (Jedis conn = getConnection()) {
+      List<byte[]> args = Tensor.tensorGetFlatArgs(key, false);
       List<?> reply =
-          sendCommand(
-                  conn,
-                  Command.TENSOR_GET,
-                  SafeEncoder.encode(key),
-                  Keyword.META.getRaw(),
-                  Keyword.VALUES.getRaw())
+          sendCommand(conn, Command.TENSOR_GET, args.toArray(new byte[args.size()][]))
               .getObjectMultiBulkReply();
       if (reply.isEmpty()) {
         return null;
@@ -331,20 +326,7 @@ public class RedisAI {
   public boolean runModel(String key, String[] inputs, String[] outputs) {
 
     try (Jedis conn = getConnection()) {
-
-      List<byte[]> args = new ArrayList<>();
-      args.add(SafeEncoder.encode(key));
-
-      args.add(Keyword.INPUTS.getRaw());
-      for (String input : inputs) {
-        args.add(SafeEncoder.encode(input));
-      }
-
-      args.add(Keyword.OUTPUTS.getRaw());
-      for (String output : outputs) {
-        args.add(SafeEncoder.encode(output));
-      }
-
+      List<byte[]> args = Model.modelRunFlatArgs(key, inputs, outputs, false);
       return sendCommand(conn, Command.MODEL_RUN, args.toArray(new byte[args.size()][]))
           .getStatusCodeReply()
           .equals("OK");
@@ -358,27 +340,56 @@ public class RedisAI {
   public boolean runScript(String key, String function, String[] inputs, String[] outputs) {
 
     try (Jedis conn = getConnection()) {
-
-      List<byte[]> args = new ArrayList<>();
-      args.add(SafeEncoder.encode(key));
-      args.add(SafeEncoder.encode(function));
-
-      args.add(Keyword.INPUTS.getRaw());
-      for (String input : inputs) {
-        args.add(SafeEncoder.encode(input));
-      }
-
-      args.add(Keyword.OUTPUTS.getRaw());
-      for (String output : outputs) {
-        args.add(SafeEncoder.encode(output));
-      }
-
+      List<byte[]> args = Script.scriptRunFlatArgs(key, function, inputs, outputs, false);
       return sendCommand(conn, Command.SCRIPT_RUN, args.toArray(new byte[args.size()][]))
           .getStatusCodeReply()
           .equals("OK");
 
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.DAGRUN specifies a direct acyclic graph of operations to run within
+   * RedisAI
+   *
+   * @param loadKeys
+   * @param persistKeys
+   * @param dag
+   * @return
+   */
+  public List<?> dagRun(String[] loadKeys, String[] persistKeys, Dag dag) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = dag.dagRunFlatArgs(loadKeys, persistKeys);
+      List<?> reply =
+          sendCommand(conn, Command.DAGRUN, args.toArray(new byte[args.size()][]))
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return dag.processDagReply(reply);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.DAGRUN_RO specifies a Read Only direct acyclic graph of operations to run
+   * within RedisAI
+   *
+   * @param loadKeys
+   * @param dag
+   * @return
+   */
+  public List<?> dagRunReadOnly(String[] loadKeys, Dag dag) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = dag.dagRunFlatArgs(loadKeys, null);
+      List<?> reply =
+          sendCommand(conn, Command.DAGRUN_RO, args.toArray(new byte[args.size()][]))
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return dag.processDagReply(reply);
     }
   }
 

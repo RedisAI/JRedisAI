@@ -97,8 +97,11 @@ public class Tensor {
    * @param key name of key to store the Model
    * @return
    */
-  protected List<byte[]> getTensorSetCommandBytes(String key) {
+  protected List<byte[]> tensorSetFlatArgs(String key, boolean includeCommandName) {
     List<byte[]> args = new ArrayList<>();
+    if (includeCommandName) {
+      args.add(Command.TENSOR_SET.getRaw());
+    }
     args.add(SafeEncoder.encode(key));
     args.add(dataType.getRaw());
     for (long shapeDimension : shape) {
@@ -106,6 +109,17 @@ public class Tensor {
     }
     args.add(Keyword.VALUES.getRaw());
     args.addAll(dataType.toByteArray(values, shape));
+    return args;
+  }
+
+  protected static List<byte[]> tensorGetFlatArgs(String key, boolean includeCommandName) {
+    List<byte[]> args = new ArrayList<>();
+    if (includeCommandName) {
+      args.add(Command.TENSOR_GET.getRaw());
+    }
+    args.add(SafeEncoder.encode(key));
+    args.add(Keyword.META.getRaw());
+    args.add(Keyword.VALUES.getRaw());
     return args;
   }
 }
