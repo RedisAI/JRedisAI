@@ -176,7 +176,9 @@ public class RedisAITest {
   @Test
   public void testSetModelFromModelOnnx() {
     try {
-      byte[] blob = Files.readAllBytes(Paths.get(getClass().getClassLoader().getResource("test_data/mnist.onnx").toURI()));
+      byte[] blob =
+          Files.readAllBytes(
+              Paths.get(getClass().getClassLoader().getResource("test_data/mnist.onnx").toURI()));
       Model m1 = new Model(Backend.ONNX, Device.CPU, new String[] {}, new String[] {}, blob);
       Assert.assertTrue(client.setModel("mnist.onnx", m1));
       Model m2 = client.getModel("mnist.onnx");
@@ -194,7 +196,13 @@ public class RedisAITest {
   @Test
   public void testSetModelFromModelTFLite() {
     try {
-      byte[] blob = Files.readAllBytes(Paths.get(getClass().getClassLoader().getResource("test_data/mnist_model_quant.tflite").toURI()));
+      byte[] blob =
+          Files.readAllBytes(
+              Paths.get(
+                  getClass()
+                      .getClassLoader()
+                      .getResource("test_data/mnist_model_quant.tflite")
+                      .toURI()));
       Model m1 = new Model(Backend.TFLITE, Device.CPU, new String[] {}, new String[] {}, blob);
       Assert.assertTrue(client.setModel("mnist.tflite", m1));
       Model m2 = client.getModel("mnist.tflite");
