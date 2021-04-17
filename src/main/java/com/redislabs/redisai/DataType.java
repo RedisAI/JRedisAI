@@ -109,23 +109,6 @@ public enum DataType implements ProtocolCommand {
     raw = SafeEncoder.encode(this.name());
   }
 
-  static DataType getDataTypefromString(String dtypeRaw) {
-    DataType dt = null;
-    if (dtypeRaw.equals(DataType.INT32.name())) {
-      dt = DataType.INT32;
-    }
-    if (dtypeRaw.equals(DataType.INT64.name())) {
-      dt = DataType.INT64;
-    }
-    if (dtypeRaw.equals(DataType.FLOAT.name())) {
-      dt = DataType.FLOAT;
-    }
-    if (dtypeRaw.equals(DataType.DOUBLE.name())) {
-      dt = DataType.DOUBLE;
-    }
-    return dt;
-  }
-
   /** The class for the data type to which Java object o corresponds. */
   public static DataType baseObjType(Object o) {
     Class<?> c = o.getClass();
