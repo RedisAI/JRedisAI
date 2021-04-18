@@ -30,3 +30,6 @@ hs_err_pid*
 .settings/
 .pydevproject
 
+*.iml
+/.idea/
+
