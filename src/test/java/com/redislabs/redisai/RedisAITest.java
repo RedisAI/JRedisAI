@@ -1,5 +1,8 @@
 package com.redislabs.redisai;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -296,6 +299,25 @@ public class RedisAITest {
           "redis.clients.jedis.exceptions.JedisDataException: ERR script key is empty",
           e.getMessage());
     }
+  }
+
+  @Test
+  public void runScriptVariadicInputs() {
+    String script =
+        "def addn(a, args : List[Tensor]):\n" + "    return a + torch.stack(args).sum()\n";
+    client.setScript("var_in", new Script(Device.CPU, script));
+
+    client.setTensor("t1", new float[] {40}, new int[] {1});
+    client.setTensor("t2", new float[] {1}, new int[] {1});
+    client.setTensor("t3", new float[] {1}, new int[] {1});
+
+    Assert.assertTrue(
+        client.runScript(
+            "var_in", "addn", new String[] {"t1", "t2", "t3"}, true, new String[] {"r"}));
+    Tensor result = client.getTensor("r");
+    assertEquals(DataType.FLOAT, result.getDataType());
+    assertArrayEquals(new long[] {1}, result.getShape());
+    assertArrayEquals(new float[] {42}, (float[]) result.getValues(), 0f);
   }
 
   @Test

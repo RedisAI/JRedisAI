@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.Client;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -83,6 +84,22 @@ public class RedisAI {
     conf.setFairness(true);
 
     return conf;
+  }
+
+  private Jedis getConnection() {
+    return pool.getResource();
+  }
+
+  private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
+    BinaryClient client = conn.getClient();
+    client.sendCommand(command, args);
+    return client;
+  }
+
+  private Client sendCommand(Jedis conn, Command command, String... args) {
+    Client client = conn.getClient();
+    client.sendCommand(command, args);
+    return client;
   }
 
   /**
@@ -336,18 +353,52 @@ public class RedisAI {
     }
   }
 
-  /** AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ... */
+  /** {@code AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ...} */
   public boolean runScript(String key, String function, String[] inputs, String[] outputs) {
+    return runScript(key, function, inputs, false, outputs);
+  }
 
+  /**
+   * {@code AI.SCRIPTRUN <key> <function> INPUTS <input> [input ...] [$ input ...] OUTPUTS <output>
+   * [output ...]}
+   */
+  public boolean runScript(
+      String key, String function, String[] inputs, boolean variadicInputs, String[] outputs) {
     try (Jedis conn = getConnection()) {
-      List<byte[]> args = Script.scriptRunFlatArgs(key, function, inputs, outputs, false);
-      return sendCommand(conn, Command.SCRIPT_RUN, args.toArray(new byte[args.size()][]))
-          .getStatusCodeReply()
-          .equals("OK");
-
+      String[] args = scriptRunFlatArgs(key, function, inputs, variadicInputs, outputs);
+      return sendCommand(conn, Command.SCRIPT_RUN, args).getStatusCodeReply().equals("OK");
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
+  }
+
+  private String[] scriptRunFlatArgs(
+      String key, String function, String[] inputs, boolean variadicInputs, String[] outputs) {
+
+    if (variadicInputs) {
+      if (inputs.length < 2) {
+        throw new IllegalArgumentException(
+            "At least two inputs are required to support variadic format.");
+      }
+    }
+
+    int length = 2 + 2 + inputs.length + (variadicInputs ? 1 : 0) + outputs.length;
+    String[] args = new String[length];
+    int index = 0;
+    args[index++] = key;
+    args[index++] = function;
+    args[index++] = Keyword.INPUTS.name();
+
+    args[index++] = inputs[0];
+    if (variadicInputs) {
+      args[index++] = "$";
+    }
+    System.arraycopy(inputs, 1, args, index, inputs.length - 1);
+    index += inputs.length - 1;
+
+    args[index++] = Keyword.OUTPUTS.name();
+    System.arraycopy(outputs, 0, args, index, outputs.length);
+    return args;
   }
 
   /**
@@ -432,16 +483,6 @@ public class RedisAI {
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
-  }
-
-  private Jedis getConnection() {
-    return pool.getResource();
-  }
-
-  private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
-    BinaryClient client = conn.getClient();
-    client.sendCommand(command, args);
-    return client;
   }
 
   /**
