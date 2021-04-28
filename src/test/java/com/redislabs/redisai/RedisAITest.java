@@ -210,6 +210,7 @@ public class RedisAITest {
     Assert.assertEquals(m2.getBackend(), m3.getBackend());
   }
 
+  @org.junit.Ignore
   @Test
   public void testSetModelFromModelTFLite() {
     try {
