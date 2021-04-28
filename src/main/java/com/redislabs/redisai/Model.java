@@ -2,17 +2,22 @@ package com.redislabs.redisai;
 
 import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import redis.clients.jedis.Protocol;
 import redis.clients.jedis.util.SafeEncoder;
 
 /** Direct mapping to RedisAI Model */
 public class Model {
+
+  public static final int DEFAULT_BLOB_CHUNK_SIZE = 512 * 1024 * 1024; // 512MB
+
   private Backend backend;
   private Device device;
   private String[] inputs;
   private String[] outputs;
   private byte[] blob;
+  private final int blobChunkSize;
   private String tag;
   private long batchSize;
   private long minBatchSize;
@@ -38,6 +43,26 @@ public class Model {
    * @param outputs - one or more names of the model's output nodes (applicable only for TensorFlow
    *     models)
    * @param blob - the Protobuf-serialized model
+   * @param blobChunkSize
+   */
+  public Model(
+      Backend backend,
+      Device device,
+      String[] inputs,
+      String[] outputs,
+      byte[] blob,
+      int blobChunkSize) {
+    this(backend, device, inputs, outputs, blob, blobChunkSize, 0, 0);
+  }
+
+  /**
+   * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param inputs - one or more names of the model's input nodes (applicable only for TensorFlow
+   *     models)
+   * @param outputs - one or more names of the model's output nodes (applicable only for TensorFlow
+   *     models)
+   * @param blob - the Protobuf-serialized model
    * @param batchSize - when provided with an batchsize that is greater than 0, the engine will
    *     batch incoming requests from multiple clients that use the model with input tensors of the
    *     same shape.
@@ -52,6 +77,33 @@ public class Model {
       byte[] blob,
       long batchSize,
       long minBatchSize) {
+    this(backend, device, inputs, outputs, blob, DEFAULT_BLOB_CHUNK_SIZE, batchSize, minBatchSize);
+  }
+
+  /**
+   * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param inputs - one or more names of the model's input nodes (applicable only for TensorFlow
+   *     models)
+   * @param outputs - one or more names of the model's output nodes (applicable only for TensorFlow
+   *     models)
+   * @param blob - the Protobuf-serialized model
+   * @param blobChunkSize
+   * @param batchSize - when provided with an batchsize that is greater than 0, the engine will
+   *     batch incoming requests from multiple clients that use the model with input tensors of the
+   *     same shape.
+   * @param minBatchSize - when provided with an minbatchsize that is greater than 0, the engine
+   *     will postpone calls to AI.MODELRUN until the batch's size had reached minbatchsize
+   */
+  public Model(
+      Backend backend,
+      Device device,
+      String[] inputs,
+      String[] outputs,
+      byte[] blob,
+      int blobChunkSize,
+      long batchSize,
+      long minBatchSize) {
     this.backend = backend;
     this.device = device;
     this.inputs = inputs;
@@ -60,6 +112,7 @@ public class Model {
     this.tag = null;
     this.batchSize = batchSize;
     this.minBatchSize = minBatchSize;
+    this.blobChunkSize = blobChunkSize;
   }
 
   public static Model createModelFromRespReply(List<?> reply) {
@@ -230,8 +283,21 @@ public class Model {
       args.add(SafeEncoder.encode(output));
     }
     args.add(Keyword.BLOB.getRaw());
-    args.add(blob);
+    chunk(args, blob, blobChunkSize);
     return args;
+  }
+
+  private static void chunk(List<byte[]> collector, byte[] array, int chunkSize) {
+    if (array.length <= chunkSize) {
+      collector.add(array);
+      return;
+    }
+    int from = 0;
+    while (from < array.length) {
+      int copySize = Math.min(array.length - from, chunkSize);
+      collector.add(Arrays.copyOfRange(array, from, from + copySize));
+      from += copySize;
+    }
   }
 
   protected static List<byte[]> modelRunFlatArgs(

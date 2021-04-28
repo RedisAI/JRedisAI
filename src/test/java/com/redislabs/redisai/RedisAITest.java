@@ -193,6 +193,24 @@ public class RedisAITest {
   }
 
   @Test
+  public void testSetModelFromModelOnnxWithBlobChunking() throws IOException {
+    final int chunkSize = 8 * 1024; // 8KB
+    ClassLoader classLoader = getClass().getClassLoader();
+    String modelPath = classLoader.getResource("test_data/mnist.onnx").getFile();
+    byte[] blob = Files.readAllBytes(Paths.get(modelPath));
+    Model m1 =
+        new Model(Backend.ONNX, Device.CPU, new String[] {}, new String[] {}, blob, chunkSize);
+    Assert.assertTrue(client.setModel("mnist.onnx", m1));
+    Model m2 = client.getModel("mnist.onnx");
+    Assert.assertEquals(m1.getDevice(), m2.getDevice());
+    Assert.assertEquals(m1.getBackend(), m2.getBackend());
+    Assert.assertTrue(client.setModel("mnist.onnx.m2", m2));
+    Model m3 = client.getModel("mnist.onnx.m2");
+    Assert.assertEquals(m2.getDevice(), m3.getDevice());
+    Assert.assertEquals(m2.getBackend(), m3.getBackend());
+  }
+
+  @Test
   public void testSetModelFromModelTFLite() {
     try {
       ClassLoader classLoader = getClass().getClassLoader();
