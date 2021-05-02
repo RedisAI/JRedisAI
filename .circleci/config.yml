@@ -3,8 +3,6 @@
 # Check https://circleci.com/docs/2.0/language-java/ for more details
 #
 version: 2.1
-orbs:
-  slack: circleci/slack@4.4.2
 
 jobs:
   build:
@@ -42,11 +40,6 @@ jobs:
       - run: mvn integration-test
       - run: mvn cobertura:cobertura          
       - run: bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN}
-      
-      - slack/notify:
-          channel: redisaidev
-          event: fail
-          template: basic_fail_1
               
       #- run: mvn -s .circleci.settings.xml -DskipTests deploy
 workflows:
