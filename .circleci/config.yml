@@ -64,4 +64,3 @@ workflows:
                 - master
     jobs:
       - build
-          context: slack-secrets
