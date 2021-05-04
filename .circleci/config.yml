@@ -8,7 +8,7 @@ jobs:
   build:
     docker:
       - image: circleci/openjdk:8u171-jdk   
-      - image: redislabs/redisai:edge-cpu
+      - image: redislabs/redisai:latest-cpu-x64-bioni
       
     working_directory: ~/repo
 
