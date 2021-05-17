@@ -1,6 +1,7 @@
 package com.redislabs.redisai;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -175,9 +176,9 @@ public class RedisAITest {
   @Test
   public void testSetModelFromModelOnnx() {
     try {
-      ClassLoader classLoader = getClass().getClassLoader();
-      String modelPath = classLoader.getResource("test_data/mnist.onnx").getFile();
-      byte[] blob = Files.readAllBytes(Paths.get(modelPath));
+      byte[] blob =
+          Files.readAllBytes(
+              Paths.get(getClass().getClassLoader().getResource("test_data/mnist.onnx").toURI()));
       Model m1 = new Model(Backend.ONNX, Device.CPU, new String[] {}, new String[] {}, blob);
       Assert.assertTrue(client.setModel("mnist.onnx", m1));
       Model m2 = client.getModel("mnist.onnx");
@@ -187,7 +188,7 @@ public class RedisAITest {
       Model m3 = client.getModel("mnist.onnx.m2");
       Assert.assertEquals(m2.getDevice(), m3.getDevice());
       Assert.assertEquals(m2.getBackend(), m3.getBackend());
-    } catch (IOException e) {
+    } catch (IOException | URISyntaxException e) {
       e.printStackTrace();
     }
   }
@@ -195,9 +196,13 @@ public class RedisAITest {
   @Test
   public void testSetModelFromModelTFLite() {
     try {
-      ClassLoader classLoader = getClass().getClassLoader();
-      String modelPath = classLoader.getResource("test_data/mnist_model_quant.tflite").getFile();
-      byte[] blob = Files.readAllBytes(Paths.get(modelPath));
+      byte[] blob =
+          Files.readAllBytes(
+              Paths.get(
+                  getClass()
+                      .getClassLoader()
+                      .getResource("test_data/mnist_model_quant.tflite")
+                      .toURI()));
       Model m1 = new Model(Backend.TFLITE, Device.CPU, new String[] {}, new String[] {}, blob);
       Assert.assertTrue(client.setModel("mnist.tflite", m1));
       Model m2 = client.getModel("mnist.tflite");
@@ -207,7 +212,7 @@ public class RedisAITest {
       Model m3 = client.getModel("mnist.tflite.m2");
       Assert.assertEquals(m2.getDevice(), m3.getDevice());
       Assert.assertEquals(m2.getBackend(), m3.getBackend());
-    } catch (IOException e) {
+    } catch (IOException | URISyntaxException e) {
       e.printStackTrace();
     }
   }

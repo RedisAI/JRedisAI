@@ -38,10 +38,7 @@ public class Tensor {
       switch (arrayKey) {
         case "dtype":
           String dtypeString = SafeEncoder.encode((byte[]) reply.get(i + 1));
-          dtype = DataType.getDataTypefromString(dtypeString);
-          if (dtype == null) {
-            throw new JRedisAIRunTimeException("Unrecognized datatype: " + dtypeString);
-          }
+          dtype = DataType.valueOf(dtypeString);
           break;
         case "shape":
           List<Long> shapeResp = (List<Long>) reply.get(i + 1);
