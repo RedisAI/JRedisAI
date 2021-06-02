@@ -195,7 +195,6 @@ public class RedisAITest {
     }
   }
 
-  @org.junit.Ignore
   @Test
   public void testSetModelFromModelTFLite() {
     try {
