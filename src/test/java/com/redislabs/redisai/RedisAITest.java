@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
+import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -209,6 +210,57 @@ public class RedisAITest {
       Assert.assertEquals(m2.getBackend(), m3.getBackend());
     } catch (IOException e) {
       e.printStackTrace();
+    }
+  }
+
+  @Test
+  public void modelStore() throws IOException {
+    String[] inputs = new String[] {"a", "b"};
+    String[] outputs = new String[] {"mul"};
+    byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+
+    Model createdModel = new Model(Backend.TF, Device.CPU, inputs, outputs, blob);
+    Assert.assertTrue(client.storeModel("model-1", createdModel));
+    Model readModel1 = client.getModel("model-1");
+    Assert.assertEquals(Backend.TF, readModel1.getBackend());
+    Assert.assertEquals(Device.CPU, readModel1.getDevice());
+    Assert.assertArrayEquals(inputs, readModel1.getInputs());
+    Assert.assertArrayEquals(outputs, readModel1.getOutputs());
+    Assert.assertEquals(0, readModel1.getBatchSize());
+    Assert.assertEquals(0, readModel1.getMinBatchSize());
+    Assert.assertEquals("", readModel1.getTag());
+
+    createdModel.setBatchSize(10);
+    createdModel.setMinBatchSize(5);
+    createdModel.setTag("test minbatching 5 batchsize 10");
+    Assert.assertTrue(client.storeModel("model-2", createdModel));
+    Model readModel2 = client.getModel("model-2");
+    Assert.assertEquals(Backend.TF, readModel2.getBackend());
+    Assert.assertEquals(Device.CPU, readModel2.getDevice());
+    Assert.assertArrayEquals(inputs, readModel2.getInputs());
+    Assert.assertArrayEquals(outputs, readModel2.getOutputs());
+    Assert.assertEquals(10, readModel2.getBatchSize());
+    Assert.assertEquals(5, readModel2.getMinBatchSize());
+    Assert.assertEquals("test minbatching 5 batchsize 10", readModel2.getTag());
+  }
+
+  @Test
+  public void modelStoreFail() throws IOException {
+    try {
+      byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+      Model model = new Model(Backend.ONNX, Device.CPU, new String[0], new String[0], blob);
+      client.storeModel("model-fail", model);
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      Assert.assertEquals("No graph was found in the protobuf.", e.getMessage());
+    }
+
+    try {
+      Model model = new Model(Backend.ONNX, Device.CPU, new String[0], new String[0], new byte[0]);
+      client.storeModel("model-fail", model);
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      Assert.assertEquals("No graph was found in the protobuf.", e.getMessage());
     }
   }
 

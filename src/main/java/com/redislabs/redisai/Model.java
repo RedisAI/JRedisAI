@@ -234,6 +234,48 @@ public class Model {
     return args;
   }
 
+  /**
+   * Encodes the current model properties into an AI.MODELSTORE command to store in RedisAI Server.
+   *
+   * @param key
+   * @return
+   */
+  protected List<byte[]> getModelStoreCommandArgs(String key) {
+    List<byte[]> args = new ArrayList<>();
+    args.add(SafeEncoder.encode(key));
+    args.add(backend.getRaw());
+    args.add(device.getRaw());
+    if (tag != null) {
+      args.add(Keyword.TAG.getRaw());
+      args.add(SafeEncoder.encode(tag));
+    }
+    if (batchSize > 0) {
+      args.add(Keyword.BATCHSIZE.getRaw());
+      args.add(Protocol.toByteArray(batchSize));
+      if (minBatchSize > 0) {
+        args.add(Keyword.MINBATCHSIZE.getRaw());
+        args.add(Protocol.toByteArray(minBatchSize));
+      }
+    }
+    if (inputs != null && inputs.length > 0) {
+      args.add(Keyword.INPUTS.getRaw());
+      args.add(Protocol.toByteArray(inputs.length));
+      for (String input : inputs) {
+        args.add(SafeEncoder.encode(input));
+      }
+    }
+    if (outputs != null && outputs.length > 0) {
+      args.add(Keyword.OUTPUTS.getRaw());
+      args.add(Protocol.toByteArray(outputs.length));
+      for (String output : outputs) {
+        args.add(SafeEncoder.encode(output));
+      }
+    }
+    args.add(Keyword.BLOB.getRaw());
+    args.add(blob);
+    return args;
+  }
+
   protected static List<byte[]> modelRunFlatArgs(
       String key, String[] inputs, String[] outputs, boolean includeCommandName) {
     List<byte[]> args = new ArrayList<>();

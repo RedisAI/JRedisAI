@@ -192,6 +192,24 @@ public class RedisAI {
   }
 
   /**
+   * Direct mapping to AI.MODELSTORE
+   *
+   * @param key name of key to store the Model
+   * @param model Model object
+   * @return true if Model was properly stored in RedisAI server
+   */
+  public boolean storeModel(String key, Model model) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = model.getModelStoreCommandArgs(key);
+      return sendCommand(conn, Command.MODEL_STORE, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
+    }
+  }
+
+  /**
    * Direct mapping to AI.MODELGET
    *
    * @param key name of key to get the Model from RedisAI server
