@@ -15,7 +15,7 @@ import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.util.Pool;
 import redis.clients.jedis.util.SafeEncoder;
 
-public class RedisAI {
+public class RedisAI implements AutoCloseable {
 
   private final Pool<Jedis> pool;
 
@@ -62,6 +62,11 @@ public class RedisAI {
    */
   public RedisAI(Pool<Jedis> pool) {
     this.pool = pool;
+  }
+
+  @Override
+  public void close() {
+    this.pool.close();
   }
 
   /**

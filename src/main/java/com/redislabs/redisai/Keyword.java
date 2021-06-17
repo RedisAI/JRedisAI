@@ -14,6 +14,7 @@ public enum Keyword implements ProtocolCommand {
   TAG,
   BATCHSIZE,
   MINBATCHSIZE,
+  MINBATCHTIMEOUT,
   TIMEOUT,
   BACKENDSPATH,
   LOADBACKEND,

@@ -15,6 +15,7 @@ public enum Backend implements ProtocolCommand {
     raw = SafeEncoder.encode(this.name());
   }
 
+  @Override
   public byte[] getRaw() {
     return raw;
   }

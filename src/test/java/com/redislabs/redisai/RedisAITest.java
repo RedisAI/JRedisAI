@@ -15,12 +15,9 @@ public class RedisAITest {
 
   private final JedisPool pool = new JedisPool();
   private final RedisAI client = new RedisAI(pool);
-  private final RedisAI clientDefaultConnection = new RedisAI();
-  private final RedisAI clientHostPort = new RedisAI("localhost", 6379);
-  private final RedisAI clientPoolSize = new RedisAI("localhost", 6379, 30000, 1);
 
   @Before
-  public void testClient() {
+  public void setUp() {
     try (Jedis conn = pool.getResource()) {
       conn.flushAll();
     }
@@ -28,25 +25,35 @@ public class RedisAITest {
 
   @Test
   public void testClientDefaultConnectionConstructorSetTensorFLOAT() {
-    Assert.assertTrue(
-        clientDefaultConnection.setTensor(
-            "ClientDefaultConnectionConstructor:tensor",
-            new float[][] {{1, 2}, {3, 4}},
-            new int[] {2, 2}));
+    try (RedisAI clientDefaultConnection = new RedisAI()) {
+      Assert.assertTrue(
+          clientDefaultConnection.setTensor(
+              "ClientDefaultConnectionConstructor:tensor",
+              new float[][] {{1, 2}, {3, 4}},
+              new int[] {2, 2}));
+    }
   }
 
   @Test
   public void testClientHostPortConstructorSetTensorFLOAT() {
-    Assert.assertTrue(
-        clientHostPort.setTensor(
-            "ClientHostPortConstructor:tensor", new float[][] {{1, 2}, {3, 4}}, new int[] {2, 2}));
+    try (RedisAI clientHostPort = new RedisAI("localhost", 6379)) {
+      Assert.assertTrue(
+          clientHostPort.setTensor(
+              "ClientHostPortConstructor:tensor",
+              new float[][] {{1, 2}, {3, 4}},
+              new int[] {2, 2}));
+    }
   }
 
   @Test
   public void testClientPoolSizeConstructorSetTensorFLOAT() {
-    Assert.assertTrue(
-        clientPoolSize.setTensor(
-            "ClientPoolSizeConstructor:tensor", new float[][] {{1, 2}, {3, 4}}, new int[] {2, 2}));
+    try (RedisAI clientPoolSize = new RedisAI("localhost", 6379, 30000, 1)) {
+      Assert.assertTrue(
+          clientPoolSize.setTensor(
+              "ClientPoolSizeConstructor:tensor",
+              new float[][] {{1, 2}, {3, 4}},
+              new int[] {2, 2}));
+    }
   }
 
   @Test
@@ -256,22 +263,25 @@ public class RedisAITest {
     Assert.assertEquals(Device.CPU, readModel1.getDevice());
     Assert.assertArrayEquals(inputs, readModel1.getInputs());
     Assert.assertArrayEquals(outputs, readModel1.getOutputs());
-    Assert.assertEquals(0, readModel1.getBatchSize());
-    Assert.assertEquals(0, readModel1.getMinBatchSize());
+    Assert.assertEquals(0L, readModel1.getBatchSize());
+    Assert.assertEquals(0L, readModel1.getMinBatchSize());
+    Assert.assertEquals(0L, readModel1.getMinBatchTimeout());
     Assert.assertEquals("", readModel1.getTag());
 
     createdModel.setBatchSize(10);
     createdModel.setMinBatchSize(5);
-    createdModel.setTag("test minbatching 5 batchsize 10");
+    createdModel.setMinBatchTimeout(15);
+    createdModel.setTag("test batching params");
     Assert.assertTrue(client.storeModel("model-2", createdModel));
     Model readModel2 = client.getModel("model-2");
     Assert.assertEquals(Backend.TF, readModel2.getBackend());
     Assert.assertEquals(Device.CPU, readModel2.getDevice());
     Assert.assertArrayEquals(inputs, readModel2.getInputs());
     Assert.assertArrayEquals(outputs, readModel2.getOutputs());
-    Assert.assertEquals(10, readModel2.getBatchSize());
-    Assert.assertEquals(5, readModel2.getMinBatchSize());
-    Assert.assertEquals("test minbatching 5 batchsize 10", readModel2.getTag());
+    Assert.assertEquals(10L, readModel2.getBatchSize());
+    Assert.assertEquals(5L, readModel2.getMinBatchSize());
+    Assert.assertEquals(15L, readModel2.getMinBatchTimeout());
+    Assert.assertEquals("test batching params", readModel2.getTag());
   }
 
   @Test
