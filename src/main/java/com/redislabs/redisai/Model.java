@@ -76,7 +76,6 @@ public class Model {
   }
 
   public static Model createModelFromRespReply(List<?> reply) {
-    Model model = null;
     Backend backend = null;
     Device device = null;
     String tag = null;
