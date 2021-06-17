@@ -214,7 +214,37 @@ public class RedisAITest {
   }
 
   @Test
-  public void modelStore() throws IOException {
+  public void testRunModel() {
+    ClassLoader classLoader = getClass().getClassLoader();
+    String model = classLoader.getResource("test_data/graph.pb").getFile();
+    client.setModel(
+        "model", Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, model);
+
+    client.setTensor("a", new float[] {2, 3}, new int[] {2});
+    client.setTensor("b", new float[] {3, 5}, new int[] {2});
+
+    Assert.assertTrue(client.runModel("model", new String[] {"a", "b"}, new String[] {"c"}));
+    Tensor tensor = client.getTensor("c");
+    float[] values = (float[]) tensor.getValues();
+    float[] expected = new float[] {6, 15};
+    Assert.assertEquals("Assert same shape of values", 2, values.length);
+    Assert.assertArrayEquals(values, expected, (float) 0.1);
+  }
+
+  @Test
+  public void testRunModelNegative() {
+    try {
+      client.runModel("dont:exist", new String[] {"a", "b"}, new String[] {"c"});
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      Assert.assertEquals(
+          "redis.clients.jedis.exceptions.JedisDataException: ERR model key is empty",
+          e.getMessage());
+    }
+  }
+
+  @Test
+  public void storeModel() throws IOException {
     String[] inputs = new String[] {"a", "b"};
     String[] outputs = new String[] {"mul"};
     byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
@@ -245,7 +275,7 @@ public class RedisAITest {
   }
 
   @Test
-  public void modelStoreFail() throws IOException {
+  public void storeModelFail() throws IOException {
     try {
       byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
       Model model = new Model(Backend.ONNX, Device.CPU, new String[0], new String[0], blob);
@@ -265,16 +295,16 @@ public class RedisAITest {
   }
 
   @Test
-  public void testRunModel() {
-    ClassLoader classLoader = getClass().getClassLoader();
-    String model = classLoader.getResource("test_data/graph.pb").getFile();
-    client.setModel(
-        "model", Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, model);
+  public void executeModel() throws IOException {
+    byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+    client.storeModel(
+        "model",
+        new Model(Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, blob));
 
     client.setTensor("a", new float[] {2, 3}, new int[] {2});
     client.setTensor("b", new float[] {3, 5}, new int[] {2});
 
-    Assert.assertTrue(client.runModel("model", new String[] {"a", "b"}, new String[] {"c"}));
+    Assert.assertTrue(client.executeModel("model", new String[] {"a", "b"}, new String[] {"c"}));
     Tensor tensor = client.getTensor("c");
     float[] values = (float[]) tensor.getValues();
     float[] expected = new float[] {6, 15};
@@ -283,14 +313,12 @@ public class RedisAITest {
   }
 
   @Test
-  public void testRunModelNegative() {
+  public void executeModelFail() {
     try {
-      client.runModel("dont:exist", new String[] {"a", "b"}, new String[] {"c"});
+      client.executeModel("dont:exist", new String[] {"a", "b"}, new String[] {"c"});
       Assert.fail("Should throw JedisDataException");
     } catch (RedisAIException e) {
-      Assert.assertEquals(
-          "redis.clients.jedis.exceptions.JedisDataException: ERR model key is empty",
-          e.getMessage());
+      Assert.assertEquals("ERR model key is empty", e.getMessage());
     }
   }
 

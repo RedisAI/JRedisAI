@@ -11,6 +11,7 @@ public enum Command implements ProtocolCommand {
   MODEL_STORE("AI.MODELSTORE"),
   MODEL_DEL("AI.MODELDEL"),
   MODEL_RUN("AI.MODELRUN"),
+  MODEL_EXECUTE("AI.MODELEXECUTE"),
   SCRIPT_SET("AI.SCRIPTSET"),
   SCRIPT_GET("AI.SCRIPTGET"),
   SCRIPT_DEL("AI.SCRIPTDEL"),
@@ -28,6 +29,7 @@ public enum Command implements ProtocolCommand {
     raw = SafeEncoder.encode(alt);
   }
 
+  @Override
   public byte[] getRaw() {
     return raw;
   }

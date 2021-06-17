@@ -295,4 +295,32 @@ public class Model {
     }
     return args;
   }
+
+  protected static List<byte[]> modelExecuteCommandArgs(
+      String key, String[] inputs, String[] outputs, long timeout, boolean includeCommandName) {
+
+    List<byte[]> args = new ArrayList<>();
+    if (includeCommandName) {
+      args.add(Command.MODEL_EXECUTE.getRaw());
+    }
+    args.add(SafeEncoder.encode(key));
+
+    args.add(Keyword.INPUTS.getRaw());
+    args.add(Protocol.toByteArray(inputs.length));
+    for (String input : inputs) {
+      args.add(SafeEncoder.encode(input));
+    }
+
+    args.add(Keyword.OUTPUTS.getRaw());
+    args.add(Protocol.toByteArray(outputs.length));
+    for (String output : outputs) {
+      args.add(SafeEncoder.encode(output));
+    }
+
+    if (timeout >= 0) {
+      args.add(Keyword.TIMEOUT.getRaw());
+      args.add(Protocol.toByteArray(timeout));
+    }
+    return args;
+  }
 }

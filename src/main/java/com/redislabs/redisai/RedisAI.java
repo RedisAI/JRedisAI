@@ -192,7 +192,10 @@ public class RedisAI {
   }
 
   /**
-   * Direct mapping to AI.MODELSTORE
+   * Direct mapping to AI.MODELSTORE command.
+   *
+   * <p>{@code AI.MODELSTORE <key> <backend> <device> [TAG tag] [BATCHSIZE n [MINBATCHSIZE m]]
+   * [INPUTS <input_count> <name> ...] [OUTPUTS <output_count> <name> ...] BLOB <model>}
    *
    * @param key name of key to store the Model
    * @param model Model object
@@ -351,6 +354,44 @@ public class RedisAI {
 
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.MODELEXECUTE command.
+   *
+   * <p>{@code AI.MODELEXECUTE <key> INPUTS <input_count> <input> [input ...] OUTPUTS <output_count>
+   * <output> [output ...]}
+   *
+   * @param key
+   * @param inputs
+   * @param outputs
+   * @return
+   */
+  public boolean executeModel(String key, String[] inputs, String[] outputs) {
+    return executeModel(key, inputs, outputs, -1L);
+  }
+
+  /**
+   * Direct mapping to AI.MODELEXECUTE command.
+   *
+   * <p>{@code AI.MODELEXECUTE <key> INPUTS <input_count> <input> [input ...] OUTPUTS <output_count>
+   * <output> [output ...] [TIMEOUT t]}
+   *
+   * @param key
+   * @param inputs
+   * @param outputs
+   * @param timeout timeout in ms
+   * @return
+   */
+  public boolean executeModel(String key, String[] inputs, String[] outputs, long timeout) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = Model.modelExecuteCommandArgs(key, inputs, outputs, timeout, false);
+      return sendCommand(conn, Command.MODEL_EXECUTE, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
     }
   }
 

@@ -48,6 +48,14 @@ public class Dag implements DagRunCommands<Dag> {
   }
 
   @Override
+  public Dag executeModel(String key, String[] inputs, String[] outputs, long timeout) {
+    List<byte[]> args = Model.modelExecuteCommandArgs(key, inputs, outputs, timeout, true);
+    this.commands.add(args);
+    this.tensorgetflag.add(false);
+    return this;
+  }
+
+  @Override
   public Dag runScript(String key, String function, String[] inputs, String[] outputs) {
     List<byte[]> args = Script.scriptRunFlatArgs(key, function, inputs, outputs, true);
     this.commands.add(args);
