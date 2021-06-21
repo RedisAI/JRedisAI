@@ -323,7 +323,6 @@ public class RedisAITest {
   }
 
   @Test
-  // TODO: this is not running.
   public void executeModelWithTimeout() throws IOException {
     byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
     client.storeModel(
@@ -333,7 +332,8 @@ public class RedisAITest {
     client.setTensor("a", new float[] {2, 3}, new int[] {2});
     client.setTensor("b", new float[] {3, 5}, new int[] {2});
 
-    Assert.assertTrue(client.executeModel("model", new String[] {"a", "b"}, new String[] {"c"}), 1);
+    Assert.assertTrue(
+        client.executeModel("model", new String[] {"a", "b"}, new String[] {"c"}, 1L));
     Tensor tensor = client.getTensor("c");
     float[] values = (float[]) tensor.getValues();
     float[] expected = new float[] {6, 15};
