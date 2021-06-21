@@ -145,6 +145,25 @@ public class DagTestV2 {
     Assert.assertArrayEquals(expected, values, (float) 0.1);
   }
 
+  // @Test
+  // public void dagExecuteWithExeception(){
+  //   setTfModel(client);
+  //   Dag dag = new Dag();
+  //   String keyA = "tensorA";
+  //   String keyB = "tensorB";
+  //   String keyC = "tensorC";
+  //   Tensor tA = new Tensor(DataType.FLOAT, new long[] {1, 2}, new float[][] {{1, 2}});
+  //   Tensor tB = new Tensor(DataType.FLOAT, new long[] {2, 3}, new float[][] {{1, 2, 3}, {4, 5,6}}
+  // );
+  //   dag.setTensor(keyA, tA);
+  //   dag.setTensor(keyB, tB);
+  //   dag.executeModel("mul", new String[] {keyA, keyB}, new String[] {keyC});
+  //   dag.getTensor(keyC);
+  //   List<?> result = client.dagExecuteReadOnly(null, new String[] {"mul"}, dag);
+  //   Assert.assertEquals(JedisDataException.class, result.get(2).getClass());
+  //   Assert.assertArrayEquals("NA".getBytes(), (byte[])result.get(3));
+  // }
+
   /** ai.dagrun test with tensorset modelrun tensorget scriptrun tensorget */
   // @Test
   // public void dagRunWithAllCommands() {

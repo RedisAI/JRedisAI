@@ -323,6 +323,25 @@ public class RedisAITest {
   }
 
   @Test
+  // TODO: this is not running.
+  public void executeModelWithTimeout() throws IOException {
+    byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+    client.storeModel(
+        "model",
+        new Model(Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, blob));
+
+    client.setTensor("a", new float[] {2, 3}, new int[] {2});
+    client.setTensor("b", new float[] {3, 5}, new int[] {2});
+
+    Assert.assertTrue(client.executeModel("model", new String[] {"a", "b"}, new String[] {"c"}), 1);
+    Tensor tensor = client.getTensor("c");
+    float[] values = (float[]) tensor.getValues();
+    float[] expected = new float[] {6, 15};
+    Assert.assertEquals("Assert same shape of values", 2, values.length);
+    Assert.assertArrayEquals(values, expected, (float) 0.1);
+  }
+
+  @Test
   public void executeModelFail() {
     try {
       client.executeModel("dont:exist", new String[] {"a", "b"}, new String[] {"c"});

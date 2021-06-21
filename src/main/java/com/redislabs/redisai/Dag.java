@@ -2,6 +2,7 @@ package com.redislabs.redisai;
 
 import java.util.ArrayList;
 import java.util.List;
+import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.util.SafeEncoder;
 
 public class Dag implements DagRunCommands<Dag> {
@@ -12,9 +13,15 @@ public class Dag implements DagRunCommands<Dag> {
   public Dag() {}
 
   protected List<?> processDagReply(List<?> reply) {
+    boolean error = false;
     List<Object> outputList = new ArrayList<>(reply.size());
     for (int i = 0; i < reply.size(); i++) {
-      if (this.tensorgetflag.get(i)) {
+      if (reply.get(i) instanceof JedisDataException) {
+        outputList.add(reply.get(i));
+        error = true;
+        continue;
+      }
+      if (this.tensorgetflag.get(i) && !error) {
         outputList.add(Tensor.createTensorFromRespReply((List<?>) reply.get(i)));
       } else {
         outputList.add(reply.get(i));
