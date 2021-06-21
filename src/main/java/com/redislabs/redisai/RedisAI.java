@@ -458,6 +458,50 @@ public class RedisAI implements AutoCloseable {
   }
 
   /**
+   * Direct mapping to AI.DAGEXECUTE specifies a direct acyclic graph of operations to run within
+   * RedisAI
+   *
+   * @param loadTensors
+   * @param persistTensors
+   * @param dag
+   * @return
+   */
+  public List<?> dagExecute(
+      String[] loadTensors, String[] persistTensors, String[] keysArg, Dag dag) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = dag.dagExecuteFlatArgs(loadTensors, persistTensors, keysArg);
+      List<?> reply =
+          sendCommand(conn, Command.DAGEXECUTE, args.toArray(new byte[args.size()][]))
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return dag.processDagReply(reply);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.DAGEXECUTE specifies a direct acyclic graph of operations to run within
+   * RedisAI
+   *
+   * @param loadKeys
+   * @param dag
+   * @return
+   */
+  public List<?> dagExecuteReadOnly(String[] loadKeys, String[] keysArg, Dag dag) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = dag.dagExecuteFlatArgs(loadKeys, null, keysArg);
+      List<?> reply =
+          sendCommand(conn, Command.DAGEXECUTE_RO, args.toArray(new byte[args.size()][]))
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return dag.processDagReply(reply);
+    }
+  }
+
+  /**
    * AI.INFO <key> [RESETSTAT]
    *
    * @param key the key name of a model or script

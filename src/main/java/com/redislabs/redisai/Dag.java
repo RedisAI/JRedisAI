@@ -85,4 +85,37 @@ public class Dag implements DagRunCommands<Dag> {
     }
     return args;
   }
+
+  List<byte[]> dagExecuteFlatArgs(
+      String[] loadTensors, String[] persistTensors, String[] keysArgs) {
+    List<byte[]> args = new ArrayList<>();
+    if (loadTensors != null && loadTensors.length > 0) {
+      args.add(Keyword.LOAD.getRaw());
+      args.add(SafeEncoder.encode(String.valueOf(loadTensors.length)));
+      for (String key : loadTensors) {
+        args.add(SafeEncoder.encode(key));
+      }
+    }
+    if (persistTensors != null && persistTensors.length > 0) {
+      args.add(Keyword.PERSIST.getRaw());
+      args.add(SafeEncoder.encode(String.valueOf(persistTensors.length)));
+      for (String key : persistTensors) {
+        args.add(SafeEncoder.encode(key));
+      }
+    }
+
+    if (keysArgs != null && keysArgs.length > 0) {
+      args.add(Keyword.KEYS.getRaw());
+      args.add(SafeEncoder.encode(String.valueOf(keysArgs.length)));
+      for (String key : keysArgs) {
+        args.add(SafeEncoder.encode(key));
+      }
+    }
+
+    for (List<byte[]> command : this.commands) {
+      args.add(Keyword.PIPE.getRaw());
+      args.addAll(command);
+    }
+    return args;
+  }
 }

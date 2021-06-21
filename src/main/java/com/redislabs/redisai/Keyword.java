@@ -20,6 +20,7 @@ public enum Keyword implements ProtocolCommand {
   LOADBACKEND,
   LOAD,
   PERSIST,
+  KEYS,
   PIPE("|>");
 
   private final byte[] raw;
