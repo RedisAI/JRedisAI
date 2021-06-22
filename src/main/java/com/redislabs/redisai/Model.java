@@ -1,7 +1,12 @@
 package com.redislabs.redisai;
 
 import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import redis.clients.jedis.Protocol;
 import redis.clients.jedis.util.SafeEncoder;
@@ -9,15 +14,33 @@ import redis.clients.jedis.util.SafeEncoder;
 /** Direct mapping to RedisAI Model */
 public class Model {
 
-  private Backend backend;
-  private Device device;
+  public static final String BLOB_CHUNK_SIZE_PROPERTY = "redisai.blob.chunkSize";
+
+  private static final int BLOB_CHUNK_SIZE =
+      Integer.parseInt(System.getProperty(BLOB_CHUNK_SIZE_PROPERTY, "0"));
+
+  private Backend backend; // TODO: final
+  private Device device; // TODO: final
   private String[] inputs;
   private String[] outputs;
-  private byte[] blob;
+  private byte[] blob; // TODO: final
   private String tag;
   private long batchSize;
   private long minBatchSize;
   private long minBatchTimeout;
+
+  /**
+   * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param modelUri - filepath of the Protobuf-serialized model
+   * @throws java.io.IOException
+   * @see #Model(com.redislabs.redisai.Backend, com.redislabs.redisai.Device, byte[])
+   * @see Files#readAllBytes(java.nio.file.Path)
+   * @see Paths#get(java.net.URI)
+   */
+  public Model(Backend backend, Device device, URI modelUri) throws IOException {
+    this(backend, device, Files.readAllBytes(Paths.get(modelUri)));
+  }
 
   /**
    * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
@@ -314,9 +337,24 @@ public class Model {
     }
 
     args.add(Keyword.BLOB.getRaw());
-    args.add(blob);
+    collectChunks(args, blob);
 
     return args;
+  }
+
+  private static void collectChunks(List<byte[]> collector, byte[] array) {
+    final int chunkSize = BLOB_CHUNK_SIZE;
+    if (chunkSize <= 0 || array.length <= chunkSize) {
+      collector.add(array);
+      return;
+    }
+
+    int from = 0;
+    while (from < array.length) {
+      int copySize = Math.min(array.length - from, chunkSize);
+      collector.add(Arrays.copyOfRange(array, from, from + copySize));
+      from += copySize;
+    }
   }
 
   protected static List<byte[]> modelRunFlatArgs(

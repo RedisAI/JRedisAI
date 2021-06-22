@@ -1,6 +1,8 @@
 package com.redislabs.redisai;
 
 import com.redislabs.redisai.exceptions.JRedisAIRunTimeException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,6 +104,22 @@ public class ModelTest {
     model.setMinBatchSize(10);
     minbatchsize = model.getMinBatchSize();
     Assert.assertEquals(10, minbatchsize);
+  }
+
+  /**
+   * @throws java.net.URISyntaxException
+   * @throws java.io.IOException
+   * @see ChunkTest#argumentsWithChunking()
+   */
+  @Test
+  public void argumentsWithoutChunking() throws URISyntaxException, IOException {
+    Model model =
+        new Model(
+            Backend.ONNX,
+            Device.GPU,
+            getClass().getClassLoader().getResource("test_data/mnist.onnx").toURI());
+
+    Assert.assertEquals(5, model.getModelStoreCommandArgs("key").size());
   }
 
   @Test
