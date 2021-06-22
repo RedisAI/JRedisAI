@@ -39,11 +39,11 @@ public class ModelTest {
     byte[] expected = new byte[0];
     Model model = new Model(Backend.ONNX, Device.GPU, new String[0], new String[0], expected);
     byte[] blob = model.getBlob();
-    Assert.assertEquals(blob, expected);
+    Assert.assertSame(blob, expected);
     byte[] expected2 = new byte[] {0x10};
     model.setBlob(expected2);
     blob = model.getBlob();
-    Assert.assertEquals(blob, expected2);
+    Assert.assertSame(blob, expected2);
   }
 
   @Test

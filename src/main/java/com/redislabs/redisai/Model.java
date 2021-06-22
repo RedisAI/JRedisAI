@@ -189,6 +189,11 @@ public class Model {
     return blob;
   }
 
+  /**
+   * @param blob
+   * @deprecated This variable will be final. Use any constructor.
+   */
+  @Deprecated
   public void setBlob(byte[] blob) {
     this.blob = blob;
   }
@@ -215,6 +220,11 @@ public class Model {
     return device;
   }
 
+  /**
+   * @param device
+   * @deprecated This variable will be final. Use any constructor.
+   */
+  @Deprecated
   public void setDevice(Device device) {
     this.device = device;
   }
@@ -223,6 +233,11 @@ public class Model {
     return backend;
   }
 
+  /**
+   * @param backend
+   * @deprecated This variable will be final. Use any constructor.
+   */
+  @Deprecated
   public void setBackend(Backend backend) {
     this.backend = backend;
   }
