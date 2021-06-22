@@ -8,6 +8,7 @@ import redis.clients.jedis.util.SafeEncoder;
 
 /** Direct mapping to RedisAI Model */
 public class Model {
+
   private Backend backend;
   private Device device;
   private String[] inputs;
@@ -16,6 +17,18 @@ public class Model {
   private String tag;
   private long batchSize;
   private long minBatchSize;
+  private long minBatchTimeout;
+
+  /**
+   * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
+   * @param device - the device that will execute the model. can be of CPU or GPU
+   * @param blob - the Protobuf-serialized model
+   */
+  public Model(Backend backend, Device device, byte[] blob) {
+    this.backend = backend;
+    this.device = device;
+    this.blob = blob;
+  }
 
   /**
    * @param backend - the backend for the model. can be one of TF, TFLITE, TORCH or ONNX
@@ -63,13 +76,13 @@ public class Model {
   }
 
   public static Model createModelFromRespReply(List<?> reply) {
-    Model model = null;
     Backend backend = null;
     Device device = null;
     String tag = null;
     byte[] blob = null;
     long batchsize = 0;
     long minbatchsize = 0;
+    long minbatchtimeout = 0;
     String[] inputs = new String[0];
     String[] outputs = new String[0];
     for (int i = 0; i < reply.size(); i += 2) {
@@ -101,6 +114,9 @@ public class Model {
         case "minbatchsize":
           minbatchsize = (Long) reply.get(i + 1);
           break;
+        case "minbatchtimeout":
+          minbatchtimeout = (Long) reply.get(i + 1);
+          break;
         case "inputs":
           List<byte[]> inputsEncoded = (List<byte[]>) reply.get(i + 1);
           if (!inputsEncoded.isEmpty()) {
@@ -123,23 +139,27 @@ public class Model {
           break;
       }
     }
+
     if (backend == null || device == null || blob == null) {
       throw new JRedisAIRunTimeException(
           "AI.MODELGET reply did not contained all elements to build the model");
     }
-    model = new Model(backend, device, inputs, outputs, blob, batchsize, minbatchsize);
-    if (tag != null) {
-      model.setTag(tag);
-    }
-    return model;
+    return new Model(backend, device, blob)
+        .setInputs(inputs)
+        .setOutputs(outputs)
+        .setBatchSize(batchsize)
+        .setMinBatchSize(minbatchsize)
+        .setMinBatchTimeout(minbatchtimeout)
+        .setTag(tag);
   }
 
   public String getTag() {
     return tag;
   }
 
-  public void setTag(String tag) {
+  public Model setTag(String tag) {
     this.tag = tag;
+    return this;
   }
 
   public byte[] getBlob() {
@@ -154,16 +174,18 @@ public class Model {
     return outputs;
   }
 
-  public void setOutputs(String[] outputs) {
+  public Model setOutputs(String[] outputs) {
     this.outputs = outputs;
+    return this;
   }
 
   public String[] getInputs() {
     return inputs;
   }
 
-  public void setInputs(String[] inputs) {
+  public Model setInputs(String[] inputs) {
     this.inputs = inputs;
+    return this;
   }
 
   public Device getDevice() {
@@ -186,16 +208,27 @@ public class Model {
     return batchSize;
   }
 
-  public void setBatchSize(long batchsize) {
+  public Model setBatchSize(long batchsize) {
     this.batchSize = batchsize;
+    return this;
   }
 
   public long getMinBatchSize() {
     return minBatchSize;
   }
 
-  public void setMinBatchSize(long minbatchsize) {
+  public Model setMinBatchSize(long minbatchsize) {
     this.minBatchSize = minbatchsize;
+    return this;
+  }
+
+  public long getMinBatchTimeout() {
+    return minBatchTimeout;
+  }
+
+  public Model setMinBatchTimeout(long minBatchTimeout) {
+    this.minBatchTimeout = minBatchTimeout;
+    return this;
   }
 
   /**
@@ -234,6 +267,58 @@ public class Model {
     return args;
   }
 
+  /**
+   * Encodes the current model properties into an AI.MODELSTORE command to store in RedisAI Server.
+   *
+   * @param key
+   * @return
+   */
+  protected List<byte[]> getModelStoreCommandArgs(String key) {
+
+    List<byte[]> args = new ArrayList<>();
+    args.add(SafeEncoder.encode(key));
+
+    args.add(backend.getRaw());
+    args.add(device.getRaw());
+
+    if (tag != null) {
+      args.add(Keyword.TAG.getRaw());
+      args.add(SafeEncoder.encode(tag));
+    }
+
+    if (batchSize > 0) {
+      args.add(Keyword.BATCHSIZE.getRaw());
+      args.add(Protocol.toByteArray(batchSize));
+
+      args.add(Keyword.MINBATCHSIZE.getRaw());
+      args.add(Protocol.toByteArray(minBatchSize));
+
+      args.add(Keyword.MINBATCHTIMEOUT.getRaw());
+      args.add(Protocol.toByteArray(minBatchTimeout));
+    }
+
+    if (inputs != null && inputs.length > 0) {
+      args.add(Keyword.INPUTS.getRaw());
+      args.add(Protocol.toByteArray(inputs.length));
+      for (String input : inputs) {
+        args.add(SafeEncoder.encode(input));
+      }
+    }
+
+    if (outputs != null && outputs.length > 0) {
+      args.add(Keyword.OUTPUTS.getRaw());
+      args.add(Protocol.toByteArray(outputs.length));
+      for (String output : outputs) {
+        args.add(SafeEncoder.encode(output));
+      }
+    }
+
+    args.add(Keyword.BLOB.getRaw());
+    args.add(blob);
+
+    return args;
+  }
+
   protected static List<byte[]> modelRunFlatArgs(
       String key, String[] inputs, String[] outputs, boolean includeCommandName) {
     List<byte[]> args = new ArrayList<>();
@@ -250,6 +335,34 @@ public class Model {
     args.add(Keyword.OUTPUTS.getRaw());
     for (String output : outputs) {
       args.add(SafeEncoder.encode(output));
+    }
+    return args;
+  }
+
+  protected static List<byte[]> modelExecuteCommandArgs(
+      String key, String[] inputs, String[] outputs, long timeout, boolean includeCommandName) {
+
+    List<byte[]> args = new ArrayList<>();
+    if (includeCommandName) {
+      args.add(Command.MODEL_EXECUTE.getRaw());
+    }
+    args.add(SafeEncoder.encode(key));
+
+    args.add(Keyword.INPUTS.getRaw());
+    args.add(Protocol.toByteArray(inputs.length));
+    for (String input : inputs) {
+      args.add(SafeEncoder.encode(input));
+    }
+
+    args.add(Keyword.OUTPUTS.getRaw());
+    args.add(Protocol.toByteArray(outputs.length));
+    for (String output : outputs) {
+      args.add(SafeEncoder.encode(output));
+    }
+
+    if (timeout >= 0) {
+      args.add(Keyword.TIMEOUT.getRaw());
+      args.add(Protocol.toByteArray(timeout));
     }
     return args;
   }

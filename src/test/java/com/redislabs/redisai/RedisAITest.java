@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
+import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,12 +15,9 @@ public class RedisAITest {
 
   private final JedisPool pool = new JedisPool();
   private final RedisAI client = new RedisAI(pool);
-  private final RedisAI clientDefaultConnection = new RedisAI();
-  private final RedisAI clientHostPort = new RedisAI("localhost", 6379);
-  private final RedisAI clientPoolSize = new RedisAI("localhost", 6379, 30000, 1);
 
   @Before
-  public void testClient() {
+  public void setUp() {
     try (Jedis conn = pool.getResource()) {
       conn.flushAll();
     }
@@ -27,25 +25,35 @@ public class RedisAITest {
 
   @Test
   public void testClientDefaultConnectionConstructorSetTensorFLOAT() {
-    Assert.assertTrue(
-        clientDefaultConnection.setTensor(
-            "ClientDefaultConnectionConstructor:tensor",
-            new float[][] {{1, 2}, {3, 4}},
-            new int[] {2, 2}));
+    try (RedisAI clientDefaultConnection = new RedisAI()) {
+      Assert.assertTrue(
+          clientDefaultConnection.setTensor(
+              "ClientDefaultConnectionConstructor:tensor",
+              new float[][] {{1, 2}, {3, 4}},
+              new int[] {2, 2}));
+    }
   }
 
   @Test
   public void testClientHostPortConstructorSetTensorFLOAT() {
-    Assert.assertTrue(
-        clientHostPort.setTensor(
-            "ClientHostPortConstructor:tensor", new float[][] {{1, 2}, {3, 4}}, new int[] {2, 2}));
+    try (RedisAI clientHostPort = new RedisAI("localhost", 6379)) {
+      Assert.assertTrue(
+          clientHostPort.setTensor(
+              "ClientHostPortConstructor:tensor",
+              new float[][] {{1, 2}, {3, 4}},
+              new int[] {2, 2}));
+    }
   }
 
   @Test
   public void testClientPoolSizeConstructorSetTensorFLOAT() {
-    Assert.assertTrue(
-        clientPoolSize.setTensor(
-            "ClientPoolSizeConstructor:tensor", new float[][] {{1, 2}, {3, 4}}, new int[] {2, 2}));
+    try (RedisAI clientPoolSize = new RedisAI("localhost", 6379, 30000, 1)) {
+      Assert.assertTrue(
+          clientPoolSize.setTensor(
+              "ClientPoolSizeConstructor:tensor",
+              new float[][] {{1, 2}, {3, 4}},
+              new int[] {2, 2}));
+    }
   }
 
   @Test
@@ -239,6 +247,107 @@ public class RedisAITest {
       Assert.assertEquals(
           "redis.clients.jedis.exceptions.JedisDataException: ERR model key is empty",
           e.getMessage());
+    }
+  }
+
+  @Test
+  public void storeModel() throws IOException {
+    String[] inputs = new String[] {"a", "b"};
+    String[] outputs = new String[] {"mul"};
+    byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+
+    Model createdModel = new Model(Backend.TF, Device.CPU, inputs, outputs, blob);
+    Assert.assertTrue(client.storeModel("model-1", createdModel));
+    Model readModel1 = client.getModel("model-1");
+    Assert.assertEquals(Backend.TF, readModel1.getBackend());
+    Assert.assertEquals(Device.CPU, readModel1.getDevice());
+    Assert.assertArrayEquals(inputs, readModel1.getInputs());
+    Assert.assertArrayEquals(outputs, readModel1.getOutputs());
+    Assert.assertEquals(0L, readModel1.getBatchSize());
+    Assert.assertEquals(0L, readModel1.getMinBatchSize());
+    Assert.assertEquals(0L, readModel1.getMinBatchTimeout());
+    Assert.assertEquals("", readModel1.getTag());
+
+    createdModel.setBatchSize(10);
+    createdModel.setMinBatchSize(5);
+    createdModel.setMinBatchTimeout(15);
+    createdModel.setTag("test batching params");
+    Assert.assertTrue(client.storeModel("model-2", createdModel));
+    Model readModel2 = client.getModel("model-2");
+    Assert.assertEquals(Backend.TF, readModel2.getBackend());
+    Assert.assertEquals(Device.CPU, readModel2.getDevice());
+    Assert.assertArrayEquals(inputs, readModel2.getInputs());
+    Assert.assertArrayEquals(outputs, readModel2.getOutputs());
+    Assert.assertEquals(10L, readModel2.getBatchSize());
+    Assert.assertEquals(5L, readModel2.getMinBatchSize());
+    Assert.assertEquals(15L, readModel2.getMinBatchTimeout());
+    Assert.assertEquals("test batching params", readModel2.getTag());
+  }
+
+  @Test
+  public void storeModelFail() throws IOException {
+    try {
+      byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+      Model model = new Model(Backend.ONNX, Device.CPU, new String[0], new String[0], blob);
+      client.storeModel("model-fail", model);
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      Assert.assertEquals("No graph was found in the protobuf.", e.getMessage());
+    }
+
+    try {
+      Model model = new Model(Backend.ONNX, Device.CPU, new String[0], new String[0], new byte[0]);
+      client.storeModel("model-fail", model);
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      Assert.assertEquals("No graph was found in the protobuf.", e.getMessage());
+    }
+  }
+
+  @Test
+  public void executeModel() throws IOException {
+    byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+    client.storeModel(
+        "model",
+        new Model(Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, blob));
+
+    client.setTensor("a", new float[] {2, 3}, new int[] {2});
+    client.setTensor("b", new float[] {3, 5}, new int[] {2});
+
+    Assert.assertTrue(client.executeModel("model", new String[] {"a", "b"}, new String[] {"c"}));
+    Tensor tensor = client.getTensor("c");
+    float[] values = (float[]) tensor.getValues();
+    float[] expected = new float[] {6, 15};
+    Assert.assertEquals("Assert same shape of values", 2, values.length);
+    Assert.assertArrayEquals(values, expected, (float) 0.1);
+  }
+
+  @Test
+  public void executeModelWithTimeout() throws IOException {
+    byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
+    client.storeModel(
+        "model",
+        new Model(Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, blob));
+
+    client.setTensor("a", new float[] {2, 3}, new int[] {2});
+    client.setTensor("b", new float[] {3, 5}, new int[] {2});
+
+    Assert.assertTrue(
+        client.executeModel("model", new String[] {"a", "b"}, new String[] {"c"}, 1L));
+    Tensor tensor = client.getTensor("c");
+    float[] values = (float[]) tensor.getValues();
+    float[] expected = new float[] {6, 15};
+    Assert.assertEquals("Assert same shape of values", 2, values.length);
+    Assert.assertArrayEquals(values, expected, (float) 0.1);
+  }
+
+  @Test
+  public void executeModelFail() {
+    try {
+      client.executeModel("dont:exist", new String[] {"a", "b"}, new String[] {"c"});
+      Assert.fail("Should throw JedisDataException");
+    } catch (RedisAIException e) {
+      Assert.assertEquals("ERR model key is empty", e.getMessage());
     }
   }
 

@@ -8,16 +8,18 @@ public enum Command implements ProtocolCommand {
   TENSOR_SET("AI.TENSORSET"),
   MODEL_GET("AI.MODELGET"),
   MODEL_SET("AI.MODELSET"),
+  MODEL_STORE("AI.MODELSTORE"),
   MODEL_DEL("AI.MODELDEL"),
   MODEL_RUN("AI.MODELRUN"),
+  MODEL_EXECUTE("AI.MODELEXECUTE"),
   SCRIPT_SET("AI.SCRIPTSET"),
   SCRIPT_GET("AI.SCRIPTGET"),
   SCRIPT_DEL("AI.SCRIPTDEL"),
   SCRIPT_RUN("AI.SCRIPTRUN"),
-  // TODO: support AI.DAGRUN
   DAGRUN("AI.DAGRUN"),
-  // TODO: support AI.DAGRUN_RO
   DAGRUN_RO("AI.DAGRUN_RO"),
+  DAGEXECUTE("AI.DAGEXECUTE"),
+  DAGEXECUTE_RO("AI.DAGEXECUTE_RO"),
   INFO("AI.INFO"),
   CONFIG("AI.CONFIG");
 
@@ -27,6 +29,7 @@ public enum Command implements ProtocolCommand {
     raw = SafeEncoder.encode(alt);
   }
 
+  @Override
   public byte[] getRaw() {
     return raw;
   }

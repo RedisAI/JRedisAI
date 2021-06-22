@@ -15,7 +15,7 @@ import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.util.Pool;
 import redis.clients.jedis.util.SafeEncoder;
 
-public class RedisAI {
+public class RedisAI implements AutoCloseable {
 
   private final Pool<Jedis> pool;
 
@@ -62,6 +62,11 @@ public class RedisAI {
    */
   public RedisAI(Pool<Jedis> pool) {
     this.pool = pool;
+  }
+
+  @Override
+  public void close() {
+    this.pool.close();
   }
 
   /**
@@ -188,6 +193,27 @@ public class RedisAI {
           .equals("OK");
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.MODELSTORE command.
+   *
+   * <p>{@code AI.MODELSTORE <key> <backend> <device> [TAG tag] [BATCHSIZE n [MINBATCHSIZE m]]
+   * [INPUTS <input_count> <name> ...] [OUTPUTS <output_count> <name> ...] BLOB <model>}
+   *
+   * @param key name of key to store the Model
+   * @param model Model object
+   * @return true if Model was properly stored in RedisAI server
+   */
+  public boolean storeModel(String key, Model model) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = model.getModelStoreCommandArgs(key);
+      return sendCommand(conn, Command.MODEL_STORE, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
     }
   }
 
@@ -336,6 +362,44 @@ public class RedisAI {
     }
   }
 
+  /**
+   * Direct mapping to AI.MODELEXECUTE command.
+   *
+   * <p>{@code AI.MODELEXECUTE <key> INPUTS <input_count> <input> [input ...] OUTPUTS <output_count>
+   * <output> [output ...]}
+   *
+   * @param key
+   * @param inputs
+   * @param outputs
+   * @return
+   */
+  public boolean executeModel(String key, String[] inputs, String[] outputs) {
+    return executeModel(key, inputs, outputs, -1L);
+  }
+
+  /**
+   * Direct mapping to AI.MODELEXECUTE command.
+   *
+   * <p>{@code AI.MODELEXECUTE <key> INPUTS <input_count> <input> [input ...] OUTPUTS <output_count>
+   * <output> [output ...] [TIMEOUT t]}
+   *
+   * @param key
+   * @param inputs
+   * @param outputs
+   * @param timeout timeout in ms
+   * @return
+   */
+  public boolean executeModel(String key, String[] inputs, String[] outputs, long timeout) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = Model.modelExecuteCommandArgs(key, inputs, outputs, timeout, false);
+      return sendCommand(conn, Command.MODEL_EXECUTE, args.toArray(new byte[args.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
+    }
+  }
+
   /** AI.SCRIPTRUN script_key fn_name INPUTS input_key1 ... OUTPUTS output_key1 ... */
   public boolean runScript(String key, String function, String[] inputs, String[] outputs) {
 
@@ -385,6 +449,50 @@ public class RedisAI {
       List<byte[]> args = dag.dagRunFlatArgs(loadKeys, null);
       List<?> reply =
           sendCommand(conn, Command.DAGRUN_RO, args.toArray(new byte[args.size()][]))
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return dag.processDagReply(reply);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.DAGEXECUTE specifies a direct acyclic graph of operations to run within
+   * RedisAI
+   *
+   * @param loadTensors
+   * @param persistTensors
+   * @param dag
+   * @return
+   */
+  public List<?> dagExecute(
+      String[] loadTensors, String[] persistTensors, String[] keysArg, Dag dag) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = dag.dagExecuteFlatArgs(loadTensors, persistTensors, keysArg);
+      List<?> reply =
+          sendCommand(conn, Command.DAGEXECUTE, args.toArray(new byte[args.size()][]))
+              .getObjectMultiBulkReply();
+      if (reply.isEmpty()) {
+        return null;
+      }
+      return dag.processDagReply(reply);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.DAGEXECUTE specifies a direct acyclic graph of operations to run within
+   * RedisAI
+   *
+   * @param loadKeys
+   * @param dag
+   * @return
+   */
+  public List<?> dagExecuteReadOnly(String[] loadKeys, String[] keysArg, Dag dag) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> args = dag.dagExecuteFlatArgs(loadKeys, null, keysArg);
+      List<?> reply =
+          sendCommand(conn, Command.DAGEXECUTE_RO, args.toArray(new byte[args.size()][]))
               .getObjectMultiBulkReply();
       if (reply.isEmpty()) {
         return null;

@@ -14,10 +14,13 @@ public enum Keyword implements ProtocolCommand {
   TAG,
   BATCHSIZE,
   MINBATCHSIZE,
+  MINBATCHTIMEOUT,
+  TIMEOUT,
   BACKENDSPATH,
   LOADBACKEND,
   LOAD,
   PERSIST,
+  KEYS,
   PIPE("|>");
 
   private final byte[] raw;
