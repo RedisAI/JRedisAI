@@ -41,7 +41,7 @@ and
   <dependencies>
     <dependency>
       <groupId>com.redislabs</groupId>
-      <artifactId>jRedisAI</artifactId>
+      <artifactId>jredisai</artifactId>
       <version>1.0.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
