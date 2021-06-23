@@ -1,6 +1,7 @@
 package com.redislabs.redisai;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -12,6 +13,7 @@ import org.junit.Before;
 import org.junit.Test;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 
 public class RedisAITest {
 
@@ -219,6 +221,55 @@ public class RedisAITest {
       Assert.assertEquals(m2.getBackend(), m3.getBackend());
     } catch (IOException e) {
       e.printStackTrace();
+    }
+  }
+
+  @Test
+  public void protocolLengthLimit() throws IOException, URISyntaxException {
+    final String serverSideBulkLimitParam = "proto-max-bulk-len";
+    String serverSideBulkLimit;
+    try (Jedis jedis = pool.getResource()) {
+      serverSideBulkLimit = jedis.configGet(serverSideBulkLimitParam).get(1);
+    }
+    try (Jedis jedis = pool.getResource()) {
+      jedis.configSet(serverSideBulkLimitParam, "1mb");
+    }
+
+    try {
+      URI resourceUri =
+          getClass().getClassLoader().getResource("test_data/mnist_model_quant.tflite").toURI();
+      Model model = new Model(Backend.TFLITE, Device.CPU, resourceUri);
+      client.storeModel("mnist.tflite", model);
+      Assert.fail("Should be invalid bulk length error.");
+    } catch (JedisConnectionException jce) {
+      Assert.assertEquals("ERR Protocol error: invalid bulk length", jce.getMessage());
+    } finally {
+      try (Jedis jedis = pool.getResource()) {
+        jedis.configSet(serverSideBulkLimitParam, serverSideBulkLimit);
+      }
+    }
+  }
+
+  @Test
+  public void protocolChunk() throws IOException, URISyntaxException {
+    final String serverSideBulkLimitParam = "proto-max-bulk-len";
+    String serverSideBulkLimit;
+    try (Jedis jedis = pool.getResource()) {
+      serverSideBulkLimit = jedis.configGet(serverSideBulkLimitParam).get(1);
+    }
+    try (Jedis jedis = pool.getResource()) {
+      jedis.configSet(serverSideBulkLimitParam, "1mb");
+    }
+
+    try {
+      URI resourceUri =
+          getClass().getClassLoader().getResource("test_data/mnist_model_quant.tflite").toURI();
+      Model model = new Model(Backend.TFLITE, Device.CPU, resourceUri);
+      new RedisAI(pool).storeModel("mnist.tflite", model);
+    } finally {
+      try (Jedis jedis = pool.getResource()) {
+        jedis.configSet(serverSideBulkLimitParam, serverSideBulkLimit);
+      }
     }
   }
 

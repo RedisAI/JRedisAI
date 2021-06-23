@@ -14,11 +14,6 @@ import redis.clients.jedis.util.SafeEncoder;
 /** Direct mapping to RedisAI Model */
 public class Model {
 
-  public static final String BLOB_CHUNK_SIZE_PROPERTY = "redisai.blob.chunkSize";
-
-  private static final int BLOB_CHUNK_SIZE =
-      Integer.parseInt(System.getProperty(BLOB_CHUNK_SIZE_PROPERTY, "0"));
-
   private Backend backend; // TODO: final
   private Device device; // TODO: final
   private String[] inputs;
@@ -309,9 +304,10 @@ public class Model {
    * Encodes the current model properties into an AI.MODELSTORE command to store in RedisAI Server.
    *
    * @param key
+   * @param blobChunkSize chunk size for blob; a non-positive number would avoid chunking the blob.
    * @return
    */
-  protected List<byte[]> getModelStoreCommandArgs(String key) {
+  protected List<byte[]> getModelStoreCommandArgs(String key, final int blobChunkSize) {
 
     List<byte[]> args = new ArrayList<>();
     args.add(SafeEncoder.encode(key));
@@ -352,13 +348,12 @@ public class Model {
     }
 
     args.add(Keyword.BLOB.getRaw());
-    collectChunks(args, blob);
+    collectChunks(args, blob, blobChunkSize);
 
     return args;
   }
 
-  private static void collectChunks(List<byte[]> collector, byte[] array) {
-    final int chunkSize = BLOB_CHUNK_SIZE;
+  private static void collectChunks(List<byte[]> collector, byte[] array, final int chunkSize) {
     if (chunkSize <= 0 || array.length <= chunkSize) {
       collector.add(array);
       return;

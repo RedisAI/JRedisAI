@@ -106,11 +106,6 @@ public class ModelTest {
     Assert.assertEquals(10, minbatchsize);
   }
 
-  /**
-   * @throws java.net.URISyntaxException
-   * @throws java.io.IOException
-   * @see ChunkTest#argumentsWithChunking()
-   */
   @Test
   public void argumentsWithoutChunking() throws URISyntaxException, IOException {
     Model model =
@@ -119,7 +114,18 @@ public class ModelTest {
             Device.GPU,
             getClass().getClassLoader().getResource("test_data/mnist.onnx").toURI());
 
-    Assert.assertEquals(5, model.getModelStoreCommandArgs("key").size());
+    Assert.assertEquals(5, model.getModelStoreCommandArgs("key", 0).size());
+  }
+
+  @Test
+  public void argumentsWithChunking() throws URISyntaxException, IOException {
+    Model model =
+        new Model(
+            Backend.ONNX,
+            Device.GPU,
+            getClass().getClassLoader().getResource("test_data/mnist.onnx").toURI());
+
+    Assert.assertEquals(8, model.getModelStoreCommandArgs("key", 8192).size());
   }
 
   @Test

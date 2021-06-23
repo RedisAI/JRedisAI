@@ -19,6 +19,8 @@ public class RedisAI implements AutoCloseable {
 
   private final Pool<Jedis> pool;
 
+  private final int blobChunkSize;
+
   /** Create a new RedisAI client with default connection to local host */
   public RedisAI() {
     this("localhost", 6379);
@@ -62,6 +64,7 @@ public class RedisAI implements AutoCloseable {
    */
   public RedisAI(Pool<Jedis> pool) {
     this.pool = pool;
+    this.blobChunkSize = readBlobChunkSize(pool);
   }
 
   @Override
@@ -90,6 +93,18 @@ public class RedisAI implements AutoCloseable {
     return conf;
   }
 
+  private static int readBlobChunkSize(Pool<Jedis> pool) {
+    final String chunkSizeKey = "proto-max-bulk-len";
+    try (Jedis jedis = pool.getResource()) {
+      List<String> configMap = jedis.configGet(chunkSizeKey);
+      if (!configMap.isEmpty()) {
+        return Integer.parseInt(configMap.get(1));
+      }
+    } catch (Exception e) {
+      // swallow any exception
+    }
+    return 0;
+  }
   /**
    * Direct mapping to AI.TENSORSET
    *
@@ -208,7 +223,7 @@ public class RedisAI implements AutoCloseable {
    */
   public boolean storeModel(String key, Model model) {
     try (Jedis conn = getConnection()) {
-      List<byte[]> args = model.getModelStoreCommandArgs(key);
+      List<byte[]> args = model.getModelStoreCommandArgs(key, blobChunkSize);
       return sendCommand(conn, Command.MODEL_STORE, args.toArray(new byte[args.size()][]))
           .getStatusCodeReply()
           .equals("OK");
