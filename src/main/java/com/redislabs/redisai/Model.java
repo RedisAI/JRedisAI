@@ -17,7 +17,7 @@ public class Model {
   public static final String BLOB_CHUNK_SIZE_PROPERTY = "redisai.blob.chunkSize";
 
   private static final int BLOB_CHUNK_SIZE =
-      Integer.parseInt(System.getProperty(BLOB_CHUNK_SIZE_PROPERTY, "0"));
+      Integer.parseInt(System.getProperty(BLOB_CHUNK_SIZE_PROPERTY, "536870912"));
 
   private Backend backend; // TODO: final
   private Device device; // TODO: final
