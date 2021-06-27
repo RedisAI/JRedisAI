@@ -14,7 +14,7 @@
 	<version>1.0.0-SNAPSHOT</version>
 	<name>JRedisAI</name>
 	<description>Java Client for RedisAI.</description>
-	<url>https://github.com/RedisAI/JRedisAI</url>
+	sign<url>https://github.com/RedisAI/JRedisAI</url>
 
 	<mailingLists>
 		<mailingList>
@@ -194,6 +194,26 @@
 						<phase>process-classes</phase>
 						<goals>
 							<goal>manifest</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>3.0.1</version>
+				<configuration>
+                    <gpgArguments>
+                        <arg>--pinentry-mode</arg>
+                        <arg>loopback</arg>
+                    </gpgArguments>
+				</configuration>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
 						</goals>
 					</execution>
 				</executions>
