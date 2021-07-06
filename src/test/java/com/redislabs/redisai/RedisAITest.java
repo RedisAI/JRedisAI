@@ -1,6 +1,8 @@
 package com.redislabs.redisai;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -256,8 +258,12 @@ public class RedisAITest {
     String[] outputs = new String[] {"mul"};
     byte[] blob = IOUtils.resourceToByteArray("test_data/graph.pb", getClass().getClassLoader());
 
-    Model createdModel = new Model(Backend.TF, Device.CPU, inputs, outputs, blob);
+    Model createdModel = new Model(Backend.TF, Device.CPU, blob);
+    createdModel.setInputs(inputs);
+    createdModel.setOutputs(outputs);
+
     Assert.assertTrue(client.storeModel("model-1", createdModel));
+
     Model readModel1 = client.getModel("model-1");
     Assert.assertEquals(Backend.TF, readModel1.getBackend());
     Assert.assertEquals(Device.CPU, readModel1.getDevice());
@@ -272,7 +278,9 @@ public class RedisAITest {
     createdModel.setMinBatchSize(5);
     createdModel.setMinBatchTimeout(15);
     createdModel.setTag("test batching params");
+
     Assert.assertTrue(client.storeModel("model-2", createdModel));
+
     Model readModel2 = client.getModel("model-2");
     Assert.assertEquals(Backend.TF, readModel2.getBackend());
     Assert.assertEquals(Device.CPU, readModel2.getDevice());
@@ -282,6 +290,29 @@ public class RedisAITest {
     Assert.assertEquals(5L, readModel2.getMinBatchSize());
     Assert.assertEquals(15L, readModel2.getMinBatchTimeout());
     Assert.assertEquals("test batching params", readModel2.getTag());
+  }
+
+  @Test
+  public void storeModelByPath() throws URISyntaxException, IOException {
+    String[] inputs = new String[] {"a", "b"};
+    String[] outputs = new String[] {"mul"};
+    URL modelUrl = getClass().getClassLoader().getResource("test_data/graph.pb");
+
+    Model createdModel = new Model(Backend.TF, Device.CPU, modelUrl.toURI());
+    createdModel.setInputs(inputs);
+    createdModel.setOutputs(outputs);
+
+    Assert.assertTrue(client.storeModel("model-uri", createdModel));
+
+    Model readModel = client.getModel("model-uri");
+    Assert.assertEquals(Backend.TF, readModel.getBackend());
+    Assert.assertEquals(Device.CPU, readModel.getDevice());
+    Assert.assertArrayEquals(inputs, readModel.getInputs());
+    Assert.assertArrayEquals(outputs, readModel.getOutputs());
+    Assert.assertEquals(0L, readModel.getBatchSize());
+    Assert.assertEquals(0L, readModel.getMinBatchSize());
+    Assert.assertEquals(0L, readModel.getMinBatchTimeout());
+    Assert.assertEquals("", readModel.getTag());
   }
 
   @Test
