@@ -20,6 +20,12 @@ public class LargeModelTest {
     bert();
   }
 
+  /**
+   * First generate a large model. E.g:
+   * https://gist.github.com/lantiga/eea9db320f81de6031c261ead1382464
+   *
+   * @throws IOException
+   */
   private static void bert() throws IOException {
     final String modelPath = "/path/to/traced_bert_qa.pt";
     final String key = "bert";
