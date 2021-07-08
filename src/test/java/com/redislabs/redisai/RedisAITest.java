@@ -29,19 +29,6 @@ public class RedisAITest {
   }
 
   @Test
-  public void withoutDefaultConfig() {
-    String host = "localhost";
-    int port = 6379;
-    int largeTimeout = 5000;
-    HostAndPort hostAndPort = new HostAndPort(host, port);
-    JedisClientConfig clientConfig =
-        DefaultJedisClientConfig.builder().socketTimeoutMillis(largeTimeout).build();
-    try (RedisAI redisAI = new RedisAI(hostAndPort, clientConfig)) {
-      Assert.assertNull(redisAI.getModel("none"));
-    }
-  }
-
-  @Test
   public void testClientDefaultConnectionConstructorSetTensorFLOAT() {
     try (RedisAI clientDefaultConnection = new RedisAI()) {
       Assert.assertTrue(
@@ -71,6 +58,22 @@ public class RedisAITest {
               "ClientPoolSizeConstructor:tensor",
               new float[][] {{1, 2}, {3, 4}},
               new int[] {2, 2}));
+    }
+  }
+
+  @Test
+  public void withoutDefaultConfig() {
+    String host = "localhost";
+    int port = 6379;
+    int largeTimeout = 5000;
+
+    HostAndPort hostAndPort = new HostAndPort(host, port);
+    JedisClientConfig clientConfig =
+        DefaultJedisClientConfig.builder().socketTimeoutMillis(largeTimeout).build();
+
+    try (RedisAI redisAI = new RedisAI(hostAndPort, clientConfig)) {
+      String script = "def bar(a, b): return a + b\n";
+      Assert.assertTrue(redisAI.setScript("script", Device.CPU, script));
     }
   }
 
