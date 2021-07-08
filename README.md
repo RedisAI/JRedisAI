@@ -59,7 +59,7 @@ and
    client.runModel("model", new String[] {"a", "b"}, new String[] {"c"});
 ```
 
-### Note
+## Note
 
 **Chunk size:** Since version `0.10.0`, the chunk size of model (blob) is set to 512mb (536870912 bytes) based on 
 default Redis configuration. This behavior can be changed by `redisai.blob.chunkSize` system property at the beginning 
