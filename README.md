@@ -61,7 +61,15 @@ and
 
 ### Note
 
-Since version `0.10.0`, the chunk size of model (blob) is set to 512mb (536870912 bytes) based on default Redis 
-configuration. This behavior can be changed by `redisai.blob.chunkSize` system property at the beginning of the 
-application. For example, chunk size can be limited to 8mb by setting `-Dredisai.blob.chunkSize=8388608` or 
+**Chunk size:** Since version `0.10.0`, the chunk size of model (blob) is set to 512mb (536870912 bytes) based on 
+default Redis configuration. This behavior can be changed by `redisai.blob.chunkSize` system property at the beginning 
+of the application. For example, chunk size can be limited to 8mb by setting `-Dredisai.blob.chunkSize=8388608` or 
 `System.setProperty(Model.BLOB_CHUNK_SIZE_PROPERTY, "8388608");`. A limit of 0 (zero) would disable chunking.
+
+**Socket timeout:** Operations with large data and/or long processing time may require a higher socket timeout. 
+Following constructor may come in handy for that purpose.
+```
+  HostAndPort hostAndPort = new HostAndPort(host, port);
+  JedisClientConfig clientConfig = DefaultJedisClientConfig.builder().socketTimeoutMillis(largeTimeout).build();
+  new RedisAI(hostAndPort, clientConfig);
+```

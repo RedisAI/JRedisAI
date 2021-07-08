@@ -10,7 +10,10 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisPool;
 
 public class RedisAITest {
@@ -55,6 +58,22 @@ public class RedisAITest {
               "ClientPoolSizeConstructor:tensor",
               new float[][] {{1, 2}, {3, 4}},
               new int[] {2, 2}));
+    }
+  }
+
+  @Test
+  public void withoutDefaultConfig() {
+    String host = "localhost";
+    int port = 6379;
+    int largeTimeout = 5000;
+
+    HostAndPort hostAndPort = new HostAndPort(host, port);
+    JedisClientConfig clientConfig =
+        DefaultJedisClientConfig.builder().socketTimeoutMillis(largeTimeout).build();
+
+    try (RedisAI redisAI = new RedisAI(hostAndPort, clientConfig)) {
+      String script = "def bar(a, b): return a + b\n";
+      Assert.assertTrue(redisAI.setScript("script", Device.CPU, script));
     }
   }
 

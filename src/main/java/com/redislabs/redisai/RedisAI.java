@@ -7,8 +7,11 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.exceptions.JedisDataException;
@@ -53,6 +56,16 @@ public class RedisAI implements AutoCloseable {
    */
   public RedisAI(String host, int port, int timeout, int poolSize, String password) {
     this(new JedisPool(initPoolConfig(poolSize), host, port, timeout, password));
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param hostAndPort
+   * @param clientConfig
+   */
+  public RedisAI(HostAndPort hostAndPort, JedisClientConfig clientConfig) {
+    this(new JedisPool(new GenericObjectPoolConfig<>(), hostAndPort, clientConfig));
   }
 
   /**
