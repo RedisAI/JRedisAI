@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
@@ -437,6 +438,12 @@ public class RedisAITest {
     String scriptStr = "def bar(a, b):\n" + "    return a + b\n";
     Script script = new Script(Device.CPU, scriptStr);
     Assert.assertTrue(client.storeScript("script", script));
+
+    Script response = client.getScript("script");
+    Assert.assertEquals(Device.CPU, script.getDevice());
+    Assert.assertEquals(scriptStr, response.getSource());
+    Assert.assertEquals("", response.getTag());
+    Assert.assertEquals(Collections.emptyList(), response.getEntryPoints());
   }
 
   @Test(expected = RedisAIException.class)
