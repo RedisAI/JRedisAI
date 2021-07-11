@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import redis.clients.jedis.BuilderFactory;
+import redis.clients.jedis.Protocol;
 import redis.clients.jedis.util.SafeEncoder;
 
 public class Script {
@@ -206,5 +207,41 @@ public class Script {
       args.add(SafeEncoder.encode(output));
     }
     return args;
+  }
+
+  protected static List<byte[]> scriptExecuteFlatArgs(
+      String key,
+      String function,
+      List<String> keys,
+      List<String> inputs,
+      List<String> args,
+      List<String> outputs,
+      long timeout,
+      boolean includeCommandName) {
+    List<byte[]> binary = new ArrayList<>();
+    if (includeCommandName) {
+      binary.add(Command.SCRIPT_EXECUTE.getRaw());
+    }
+
+    binary.add(SafeEncoder.encode(key));
+    binary.add(SafeEncoder.encode(function));
+    variadicArgumentsCheckAndAddWithCount(binary, Keyword.KEYS, keys);
+    variadicArgumentsCheckAndAddWithCount(binary, Keyword.INPUTS, inputs);
+    variadicArgumentsCheckAndAddWithCount(binary, Keyword.ARGS, args);
+    variadicArgumentsCheckAndAddWithCount(binary, Keyword.OUTPUTS, outputs);
+    if (timeout >= 0) {
+      binary.add(Keyword.TIMEOUT.getRaw());
+      binary.add(Protocol.toByteArray(timeout));
+    }
+
+    return binary;
+  }
+
+  private static void variadicArgumentsCheckAndAddWithCount(
+      List<byte[]> arguments, Keyword keyword, List<String> values) {
+    if (values == null || values.isEmpty()) return;
+    arguments.add(keyword.getRaw());
+    arguments.add(Protocol.toByteArray(values.size()));
+    values.forEach(v -> arguments.add(SafeEncoder.encode(v)));
   }
 }

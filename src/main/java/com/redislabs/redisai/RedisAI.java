@@ -350,7 +350,7 @@ public class RedisAI implements AutoCloseable {
   public boolean storeScript(String key, Script script) {
     try (Jedis conn = getConnection()) {
       List<String> args = script.getScriptStoreCommandBytes(key);
-      return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new String[args.size()]))
+      return sendCommand(conn, Command.SCRIPT_STORE, args.toArray(new String[args.size()]))
           .getStatusCodeReply()
           .equals("OK");
     } catch (JedisDataException ex) {
@@ -462,6 +462,50 @@ public class RedisAI implements AutoCloseable {
 
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
+    }
+  }
+
+  public boolean executeScript(
+      String key,
+      String function,
+      List<String> keys,
+      List<String> inputs,
+      List<String> args,
+      List<String> outputs) {
+    return executeScript(key, function, keys, inputs, args, outputs, -1);
+  }
+
+  /**
+   * Direct mapping to AI.SCRIPTEXECUTE command.
+   *
+   * <p>{@code AI.SCRIPTEXECUTE <key> <function> [KEYS n <key> [keys...]] [INPUTS m <input> [input
+   * ...]] [ARGS k <arg> [arg...]] [OUTPUTS k <output> [output ...] [TIMEOUT t]]+}
+   *
+   * @param key
+   * @param function
+   * @param keys
+   * @param inputs
+   * @param args
+   * @param outputs
+   * @param timeout timeout in ms
+   * @return
+   */
+  public boolean executeScript(
+      String key,
+      String function,
+      List<String> keys,
+      List<String> inputs,
+      List<String> args,
+      List<String> outputs,
+      long timeout) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> binary =
+          Script.scriptExecuteFlatArgs(key, function, keys, inputs, args, outputs, timeout, false);
+      return sendCommand(conn, Command.SCRIPT_EXECUTE, binary.toArray(new byte[binary.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
     }
   }
 
