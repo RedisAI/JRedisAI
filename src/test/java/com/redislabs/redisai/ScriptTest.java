@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.Assert;
@@ -100,5 +101,11 @@ public class ScriptTest {
       Assert.assertEquals(
           "AI.SCRIPTGET reply did not contained all elements to build the script", e.getMessage());
     }
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void invalidDevice() {
+    Script.createScriptFromRespReply(
+        Arrays.asList("device".getBytes(), "".getBytes(), "script".getBytes(), "".getBytes()));
   }
 }
