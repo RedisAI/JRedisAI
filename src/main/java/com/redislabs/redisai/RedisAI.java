@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.Client;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisClientConfig;
@@ -101,6 +102,22 @@ public class RedisAI implements AutoCloseable {
     conf.setFairness(true);
 
     return conf;
+  }
+
+  private Jedis getConnection() {
+    return pool.getResource();
+  }
+
+  private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
+    BinaryClient client = conn.getClient();
+    client.sendCommand(command, args);
+    return client;
+  }
+
+  private Client sendCommand(Jedis conn, Command command, String... args) {
+    Client client = conn.getClient();
+    client.sendCommand(command, args);
+    return client;
   }
 
   /**
@@ -317,6 +334,27 @@ public class RedisAI implements AutoCloseable {
 
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
+    }
+  }
+
+  /**
+   * Direct mapping to AI.MODELSTORE command.
+   *
+   * <p>{@code AI.SCRIPTSTORE <key> <device> [TAG tag] ENTRY_POINTS <entry_point_count>
+   * <entry_point> [<entry_point>...] SOURCE "<script>"}
+   *
+   * @param key name of key to store the Script in RedisAI server
+   * @param script the Script Object
+   * @return true if Script was properly stored in RedisAI server
+   */
+  public boolean storeScript(String key, Script script) {
+    try (Jedis conn = getConnection()) {
+      List<String> args = script.getScriptStoreCommandBytes(key);
+      return sendCommand(conn, Command.SCRIPT_SET, args.toArray(new String[args.size()]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
     }
   }
 
@@ -553,16 +591,6 @@ public class RedisAI implements AutoCloseable {
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
-  }
-
-  private Jedis getConnection() {
-    return pool.getResource();
-  }
-
-  private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
-    BinaryClient client = conn.getClient();
-    client.sendCommand(command, args);
-    return client;
   }
 
   /**

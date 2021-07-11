@@ -12,6 +12,7 @@ public enum Keyword implements ProtocolCommand {
   SOURCE,
   RESETSTAT,
   TAG,
+  ENTRY_POINTS,
   BATCHSIZE,
   MINBATCHSIZE,
   MINBATCHTIMEOUT,

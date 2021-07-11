@@ -433,6 +433,19 @@ public class RedisAITest {
   }
 
   @Test
+  public void storeScript() {
+    String scriptStr = "def bar(a, b):\n" + "    return a + b\n";
+    Script script = new Script(Device.CPU, scriptStr);
+    Assert.assertTrue(client.storeScript("script", script));
+  }
+
+  @Test(expected = RedisAIException.class)
+  public void storeScriptNegative() {
+    Script script = new Script(Device.CPU, "def fun () :\n");
+    client.storeScript("negative", script);
+  }
+
+  @Test
   public void testRunScript() {
     ClassLoader classLoader = getClass().getClassLoader();
     String script = classLoader.getResource("test_data/script.txt").getFile();

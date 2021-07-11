@@ -7,8 +7,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import redis.clients.jedis.BuilderFactory;
 import redis.clients.jedis.util.SafeEncoder;
 
 public class Script {
@@ -23,12 +25,14 @@ public class Script {
    * tag is an optional string for tagging the model such as a version number or any arbitrary
    * identifier
    */
-  private String tag = null; // TODO: final
+  private String tag;
+
+  private List<String> entryPoints;
 
   /** @param device the device that will execute the model. can be of CPU or GPU */
   @Deprecated
   public Script(Device device) {
-    this(device, null, "");
+    this(device, "");
   }
 
   /**
@@ -36,12 +40,7 @@ public class Script {
    * @param source a string containing TorchScript source code
    */
   public Script(Device device, String source) {
-    this(device, null, source);
-  }
-
-  public Script(Device device, String tag, String source) {
     this.device = device;
-    this.tag = tag;
     this.source = source;
   }
 
@@ -66,25 +65,29 @@ public class Script {
     Device device = null;
     String tag = null;
     String source = null;
+    List<String> entryPoints = null;
     for (int i = 0; i < reply.size(); i += 2) {
-      String arrayKey = SafeEncoder.encode((byte[]) reply.get(i));
-      switch (arrayKey) {
+      String mapKey = SafeEncoder.encode((byte[]) reply.get(i));
+      Object mapVal = reply.get(i + 1);
+      switch (mapKey) {
         case "source":
-          source = SafeEncoder.encode((byte[]) reply.get(i + 1));
+          source = BuilderFactory.STRING.build(mapVal);
           break;
         case "device":
-          String deviceString = SafeEncoder.encode((byte[]) reply.get(i + 1));
-          device = Device.valueOf(deviceString);
+          device = Device.valueOf(BuilderFactory.STRING.build(mapVal));
           break;
         case "tag":
-          tag = SafeEncoder.encode((byte[]) reply.get(i + 1));
+          tag = BuilderFactory.STRING.build(mapVal);
+          break;
+        case "Entry Points":
+          entryPoints = BuilderFactory.STRING_LIST.build(mapVal);
           break;
         default:
           break;
       }
     }
     if (device != null && source != null) {
-      return new Script(device, tag, source);
+      return new Script(device, source).setTag(tag).setEntryPoints(entryPoints);
     }
     throw new JRedisAIRunTimeException(
         "AI.SCRIPTGET reply did not contained all elements to build the script");
@@ -112,9 +115,22 @@ public class Script {
     return tag;
   }
 
-  @Deprecated
-  public void setTag(String tag) {
+  public Script setTag(String tag) {
     this.tag = tag;
+    return this;
+  }
+
+  public List<String> getEntryPoints() {
+    return entryPoints;
+  }
+
+  public Script setEntryPoints(List<String> entryPoints) {
+    this.entryPoints = entryPoints;
+    return this;
+  }
+
+  public Script setEntryPoints(String... entryPoints) {
+    return setEntryPoints(Arrays.asList(entryPoints));
   }
 
   /**
@@ -133,6 +149,30 @@ public class Script {
     }
     args.add(Keyword.SOURCE.getRaw());
     args.add(SafeEncoder.encode(source));
+    return args;
+  }
+
+  /**
+   * Prepare AI.SCRIPTSTORE command arguments
+   *
+   * @param key name of key to store the Script
+   * @return
+   */
+  protected List<String> getScriptStoreCommandBytes(String key) {
+    List<String> args = new ArrayList<>();
+    args.add(key);
+    args.add(device.name());
+    if (tag != null) {
+      args.add(Keyword.TAG.name());
+      args.add(tag);
+    }
+    if (entryPoints != null && !entryPoints.isEmpty()) {
+      args.add(Keyword.ENTRY_POINTS.name());
+      args.add(Integer.toString(entryPoints.size()));
+      args.addAll(entryPoints);
+    }
+    args.add(Keyword.SOURCE.name());
+    args.add(source);
     return args;
   }
 
