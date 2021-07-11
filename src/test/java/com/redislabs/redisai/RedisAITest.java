@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
@@ -435,19 +434,6 @@ public class RedisAITest {
     }
   }
 
-  @Test
-  public void storeScript() {
-    String scriptStr = "def bar(a, b):\n" + "    return a + b\n";
-    Script script = new Script(Device.CPU, scriptStr);
-    Assert.assertTrue(client.storeScript("script", script));
-
-    Script response = client.getScript("script");
-    Assert.assertEquals(Device.CPU, script.getDevice());
-    Assert.assertEquals(scriptStr, response.getSource());
-    Assert.assertEquals("", response.getTag());
-    Assert.assertEquals(Collections.emptyList(), response.getEntryPoints());
-  }
-
   @Test(expected = RedisAIException.class)
   public void storeScriptNegative() {
     Script script = new Script(Device.CPU, "def fun () :\n");
@@ -480,12 +466,18 @@ public class RedisAITest {
   }
 
   @Test
-  public void executeScript() throws IOException {
-    String script =
+  public void storeExecuteScript() throws IOException {
+    String scriptStr =
         IOUtils.resourceToString(
             "test_data/script_v2.txt", StandardCharsets.US_ASCII, getClass().getClassLoader());
-    client.storeScript(
-        "script", new Script(Device.CPU, script).setEntryPoints("bar", "bar_variadic"));
+    Script script = new Script(Device.CPU, scriptStr).setEntryPoints("bar", "bar_variadic");
+    client.storeScript("script", script);
+
+    Script response = client.getScript("script");
+    Assert.assertEquals(Device.CPU, script.getDevice());
+    Assert.assertEquals(scriptStr, response.getSource());
+    Assert.assertEquals("", response.getTag());
+    Assert.assertEquals(Arrays.asList("bar", "bar_variadic"), response.getEntryPoints());
 
     client.setTensor("a{1}", new float[][] {{2, 3}, {2, 3}}, new int[] {2, 2});
     client.setTensor("b{1}", new float[][] {{2, 3}, {2, 3}}, new int[] {2, 2});
