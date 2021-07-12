@@ -11,7 +11,7 @@ import org.junit.Test;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-public class DagTestV2 {
+public class DagV2Test {
   private final JedisPool pool = new JedisPool();
   private final RedisAI client = new RedisAI(pool);
 
