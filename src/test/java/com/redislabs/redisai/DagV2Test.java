@@ -61,10 +61,7 @@ public class DagV2Test {
     dag.getTensor("tensorC");
     List<?> result =
         client.dagExecute(
-            new String[] {"tensorA", "tensorB"},
-            new String[] {"tensorC"},
-            new String[] {"mul"},
-            dag);
+            new String[] {"tensorA", "tensorB"}, new String[] {"tensorC"}, "mul", dag);
     float[] expected = new float[] {1, 4};
 
     Tensor tensorC = (Tensor) result.get(1);
@@ -110,7 +107,7 @@ public class DagV2Test {
     dag.setTensor(keyB, tB);
     dag.executeModel("mul", new String[] {keyA, keyB}, new String[] {keyC});
     dag.getTensor(keyC);
-    List<?> result = client.dagExecute(null, null, new String[] {"mul"}, dag);
+    List<?> result = client.dagExecute(null, null, "mul", dag);
     float[] expected = new float[] {2, 6};
 
     Tensor tensorC = (Tensor) result.get(3);
@@ -137,7 +134,7 @@ public class DagV2Test {
     dag.setTensor(keyB, tB);
     dag.executeModel("mul", new String[] {keyA, keyB}, new String[] {keyC});
     dag.getTensor(keyC);
-    List<?> result = client.dagExecuteReadOnly(null, new String[] {"mul"}, dag);
+    List<?> result = client.dagExecuteReadOnly(null, "mul", dag);
     float[] expected = new float[] {2, 6};
     Tensor tensorC = (Tensor) result.get(3);
     float[] values = (float[]) tensorC.getValues();
@@ -159,7 +156,7 @@ public class DagV2Test {
     dag.setTensor(keyB, tB);
     dag.executeModel("mul", new String[] {keyA, keyB}, new String[] {keyC});
     //    dag.getTensor(keyC);
-    List<?> result = client.dagExecuteReadOnly(null, new String[] {"mul"}, dag);
+    List<?> result = client.dagExecuteReadOnly(null, "mul", dag);
     Assert.assertArrayEquals("OK".getBytes(), (byte[]) result.get(0));
     Assert.assertArrayEquals("OK".getBytes(), (byte[]) result.get(1));
     Assert.assertEquals(RedisAIException.class, result.get(2).getClass());

@@ -21,6 +21,7 @@ public enum Keyword implements ProtocolCommand {
   LOAD,
   PERSIST,
   KEYS,
+  ROUTING,
   PIPE("|>");
 
   private final byte[] raw;

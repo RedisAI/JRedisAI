@@ -480,9 +480,9 @@ public class RedisAI implements AutoCloseable {
    * @return
    */
   public List<?> dagExecute(
-      String[] loadTensors, String[] persistTensors, String[] keysArg, Dag dag) {
+      String[] loadTensors, String[] persistTensors, String routingHint, Dag dag) {
     try (Jedis conn = getConnection()) {
-      List<byte[]> args = dag.dagExecuteFlatArgs(loadTensors, persistTensors, keysArg);
+      List<byte[]> args = dag.dagExecuteFlatArgs(loadTensors, persistTensors, routingHint);
       List<?> reply =
           sendCommand(conn, Command.DAGEXECUTE, args.toArray(new byte[args.size()][]))
               .getObjectMultiBulkReply();
@@ -501,9 +501,9 @@ public class RedisAI implements AutoCloseable {
    * @param dag
    * @return
    */
-  public List<?> dagExecuteReadOnly(String[] loadKeys, String[] keysArg, Dag dag) {
+  public List<?> dagExecuteReadOnly(String[] loadKeys, String routingHint, Dag dag) {
     try (Jedis conn = getConnection()) {
-      List<byte[]> args = dag.dagExecuteFlatArgs(loadKeys, null, keysArg);
+      List<byte[]> args = dag.dagExecuteFlatArgs(loadKeys, null, routingHint);
       List<?> reply =
           sendCommand(conn, Command.DAGEXECUTE_RO, args.toArray(new byte[args.size()][]))
               .getObjectMultiBulkReply();
