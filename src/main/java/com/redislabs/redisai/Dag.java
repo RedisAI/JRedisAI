@@ -77,7 +77,7 @@ public class Dag implements DagRunCommands<Dag> {
       List<String> args,
       List<String> outputs) {
     List<byte[]> binary =
-        Script.scriptExecuteFlatArgs(key, function, keys, inputs, keys, outputs, -1L, true);
+        Script.scriptExecuteFlatArgs(key, function, keys, inputs, args, outputs, -1L, true);
     this.commands.add(binary);
     this.tensorgetflag.add(false);
     return this;
