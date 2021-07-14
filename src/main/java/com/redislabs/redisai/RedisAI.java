@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.Client;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisClientConfig;
@@ -101,6 +102,22 @@ public class RedisAI implements AutoCloseable {
     conf.setFairness(true);
 
     return conf;
+  }
+
+  private Jedis getConnection() {
+    return pool.getResource();
+  }
+
+  private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
+    BinaryClient client = conn.getClient();
+    client.sendCommand(command, args);
+    return client;
+  }
+
+  private Client sendCommand(Jedis conn, Command command, String... args) {
+    Client client = conn.getClient();
+    client.sendCommand(command, args);
+    return client;
   }
 
   /**
@@ -321,6 +338,27 @@ public class RedisAI implements AutoCloseable {
   }
 
   /**
+   * Direct mapping to AI.MODELSTORE command.
+   *
+   * <p>{@code AI.SCRIPTSTORE <key> <device> [TAG tag] ENTRY_POINTS <entry_point_count>
+   * <entry_point> [<entry_point>...] SOURCE "<script>"}
+   *
+   * @param key name of key to store the Script in RedisAI server
+   * @param script the Script Object
+   * @return true if Script was properly stored in RedisAI server
+   */
+  public boolean storeScript(String key, Script script) {
+    try (Jedis conn = getConnection()) {
+      List<String> args = script.getScriptStoreCommandBytes(key);
+      return sendCommand(conn, Command.SCRIPT_STORE, args.toArray(new String[args.size()]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
+    }
+  }
+
+  /**
    * Direct mapping to AI.SCRIPTGET
    *
    * @param key name of key to get the Script from RedisAI server
@@ -424,6 +462,50 @@ public class RedisAI implements AutoCloseable {
 
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
+    }
+  }
+
+  public boolean executeScript(
+      String key,
+      String function,
+      List<String> keys,
+      List<String> inputs,
+      List<String> args,
+      List<String> outputs) {
+    return executeScript(key, function, keys, inputs, args, outputs, -1);
+  }
+
+  /**
+   * Direct mapping to AI.SCRIPTEXECUTE command.
+   *
+   * <p>{@code AI.SCRIPTEXECUTE <key> <function> [KEYS n <key> [keys...]] [INPUTS m <input> [input
+   * ...]] [ARGS k <arg> [arg...]] [OUTPUTS k <output> [output ...] [TIMEOUT t]]+}
+   *
+   * @param key
+   * @param function
+   * @param keys
+   * @param inputs
+   * @param args
+   * @param outputs
+   * @param timeout timeout in ms
+   * @return
+   */
+  public boolean executeScript(
+      String key,
+      String function,
+      List<String> keys,
+      List<String> inputs,
+      List<String> args,
+      List<String> outputs,
+      long timeout) {
+    try (Jedis conn = getConnection()) {
+      List<byte[]> binary =
+          Script.scriptExecuteFlatArgs(key, function, keys, inputs, args, outputs, timeout, false);
+      return sendCommand(conn, Command.SCRIPT_EXECUTE, binary.toArray(new byte[binary.size()][]))
+          .getStatusCodeReply()
+          .equals("OK");
+    } catch (JedisDataException ex) {
+      throw new RedisAIException(ex.getMessage(), ex);
     }
   }
 
@@ -553,16 +635,6 @@ public class RedisAI implements AutoCloseable {
     } catch (JedisDataException ex) {
       throw new RedisAIException(ex);
     }
-  }
-
-  private Jedis getConnection() {
-    return pool.getResource();
-  }
-
-  private BinaryClient sendCommand(Jedis conn, Command command, byte[]... args) {
-    BinaryClient client = conn.getClient();
-    client.sendCommand(command, args);
-    return client;
   }
 
   /**

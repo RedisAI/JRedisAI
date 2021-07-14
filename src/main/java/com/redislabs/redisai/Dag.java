@@ -68,6 +68,21 @@ public class Dag implements DagRunCommands<Dag> {
     return this;
   }
 
+  @Override
+  public Dag executeScript(
+      String key,
+      String function,
+      List<String> keys,
+      List<String> inputs,
+      List<String> args,
+      List<String> outputs) {
+    List<byte[]> binary =
+        Script.scriptExecuteFlatArgs(key, function, keys, inputs, args, outputs, -1L, true);
+    this.commands.add(binary);
+    this.tensorgetflag.add(false);
+    return this;
+  }
+
   List<byte[]> dagRunFlatArgs(String[] loadKeys, String[] persistKeys) {
     List<byte[]> args = new ArrayList<>();
     if (loadKeys != null && loadKeys.length > 0) {
