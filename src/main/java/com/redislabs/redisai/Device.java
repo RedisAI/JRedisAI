@@ -10,9 +10,10 @@ public enum Device implements ProtocolCommand {
   private final byte[] raw;
 
   Device() {
-    raw = SafeEncoder.encode(this.name());
+    raw = SafeEncoder.encode(name());
   }
 
+  @Override
   public byte[] getRaw() {
     return raw;
   }

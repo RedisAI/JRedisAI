@@ -12,6 +12,7 @@ public enum Keyword implements ProtocolCommand {
   SOURCE,
   RESETSTAT,
   TAG,
+  ENTRY_POINTS,
   BATCHSIZE,
   MINBATCHSIZE,
   MINBATCHTIMEOUT,
@@ -21,6 +22,7 @@ public enum Keyword implements ProtocolCommand {
   LOAD,
   PERSIST,
   KEYS,
+  ARGS,
   PIPE("|>");
 
   private final byte[] raw;
