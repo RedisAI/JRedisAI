@@ -3,8 +3,10 @@ package com.redislabs.redisai;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
@@ -432,6 +434,12 @@ public class RedisAITest {
     }
   }
 
+  @Test(expected = RedisAIException.class)
+  public void storeScriptNegative() {
+    Script script = new Script(Device.CPU, "def fun () :\n");
+    client.storeScript("negative", script);
+  }
+
   @Test
   public void testRunScript() {
     ClassLoader classLoader = getClass().getClassLoader();
@@ -458,13 +466,55 @@ public class RedisAITest {
   }
 
   @Test
+  public void storeExecuteScript() throws IOException {
+    String scriptStr =
+        IOUtils.resourceToString(
+            "test_data/script_v2.txt", StandardCharsets.US_ASCII, getClass().getClassLoader());
+    Script script = new Script(Device.CPU, scriptStr).setEntryPoints("bar", "bar_variadic");
+    client.storeScript("script", script);
+
+    Script response = client.getScript("script");
+    Assert.assertEquals(Device.CPU, script.getDevice());
+    Assert.assertEquals(scriptStr, response.getSource());
+    Assert.assertEquals("", response.getTag());
+    Assert.assertEquals(Arrays.asList("bar", "bar_variadic"), response.getEntryPoints());
+
+    client.setTensor("a{1}", new float[][] {{2, 3}, {2, 3}}, new int[] {2, 2});
+    client.setTensor("b{1}", new float[][] {{2, 3}, {2, 3}}, new int[] {2, 2});
+
+    Assert.assertTrue(
+        client.executeScript(
+            "script",
+            "bar",
+            Arrays.asList("{1}"),
+            Arrays.asList("a{1}", "b{1}"),
+            null,
+            Arrays.asList("c{1}")));
+
+    Tensor tensor = client.getTensor("c{1}");
+    Assert.assertArrayEquals(new float[] {4, 6, 4, 6}, (float[]) tensor.getValues(), 0f);
+
+    Assert.assertTrue(
+        client.executeScript(
+            "script",
+            "bar_variadic",
+            Arrays.asList("{1}"),
+            Arrays.asList("a{1}", "b{1}"),
+            null,
+            Arrays.asList("d{1}")));
+
+    Tensor tensor2 = client.getTensor("d{1}");
+    Assert.assertArrayEquals(new float[] {4, 6, 4, 6}, (float[]) tensor2.getValues(), 0f);
+  }
+
+  @Test
   public void testGetTensor() {
     Assert.assertTrue(client.setTensor("t1", new float[][] {{1, 2}, {3, 4}}, new int[] {2, 2}));
     Tensor tensor = client.getTensor("t1");
     float[] values = (float[]) tensor.getValues();
     Assert.assertEquals("Assert same shape of values", 4, values.length);
     float[] expected = new float[] {1, 2, 3, 4};
-    Assert.assertArrayEquals(values, expected, (float) 0.1);
+    Assert.assertArrayEquals(expected, values, (float) 0.1);
   }
 
   @Test

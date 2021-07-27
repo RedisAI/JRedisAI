@@ -68,6 +68,21 @@ public class Dag implements DagRunCommands<Dag> {
     return this;
   }
 
+  @Override
+  public Dag executeScript(
+      String key,
+      String function,
+      List<String> keys,
+      List<String> inputs,
+      List<String> args,
+      List<String> outputs) {
+    List<byte[]> binary =
+        Script.scriptExecuteFlatArgs(key, function, keys, inputs, args, outputs, -1L, true);
+    this.commands.add(binary);
+    this.tensorgetflag.add(false);
+    return this;
+  }
+
   List<byte[]> dagRunFlatArgs(String[] loadKeys, String[] persistKeys) {
     List<byte[]> args = new ArrayList<>();
     if (loadKeys != null && loadKeys.length > 0) {
@@ -92,7 +107,7 @@ public class Dag implements DagRunCommands<Dag> {
   }
 
   List<byte[]> dagExecuteFlatArgs(
-      String[] loadTensors, String[] persistTensors, String[] keysArgs) {
+      String[] loadTensors, String[] persistTensors, String routingHint) {
     List<byte[]> args = new ArrayList<>();
     if (loadTensors != null && loadTensors.length > 0) {
       args.add(Keyword.LOAD.getRaw());
@@ -109,12 +124,9 @@ public class Dag implements DagRunCommands<Dag> {
       }
     }
 
-    if (keysArgs != null && keysArgs.length > 0) {
-      args.add(Keyword.KEYS.getRaw());
-      args.add(SafeEncoder.encode(String.valueOf(keysArgs.length)));
-      for (String key : keysArgs) {
-        args.add(SafeEncoder.encode(key));
-      }
+    if (routingHint != null) {
+      args.add(Keyword.ROUTING.getRaw());
+      args.add(SafeEncoder.encode(routingHint));
     }
 
     for (List<byte[]> command : this.commands) {
