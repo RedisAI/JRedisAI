@@ -43,6 +43,8 @@ public class RedisAI implements AutoCloseable {
    *
    * @param host the redis host
    * @param port the redis pot
+   * @param timeout
+   * @param poolSize
    */
   public RedisAI(String host, int port, int timeout, int poolSize) {
     this(host, port, timeout, poolSize, null);
@@ -53,6 +55,8 @@ public class RedisAI implements AutoCloseable {
    *
    * @param host the redis host
    * @param port the redis pot
+   * @param timeout
+   * @param poolSize
    * @param password the password for authentication in a password protected Redis server
    */
   public RedisAI(String host, int port, int timeout, int poolSize, String password) {
@@ -66,7 +70,32 @@ public class RedisAI implements AutoCloseable {
    * @param clientConfig
    */
   public RedisAI(HostAndPort hostAndPort, JedisClientConfig clientConfig) {
-    this(new JedisPool(new GenericObjectPoolConfig<>(), hostAndPort, clientConfig));
+    this(new GenericObjectPoolConfig<>(), hostAndPort, clientConfig);
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param hostAndPort
+   * @param clientConfig
+   * @param poolSize
+   */
+  public RedisAI(HostAndPort hostAndPort, JedisClientConfig clientConfig, int poolSize) {
+    this(initPoolConfig(poolSize), hostAndPort, clientConfig);
+  }
+
+  /**
+   * Create a new RedisAI client
+   *
+   * @param poolConfig
+   * @param hostAndPort
+   * @param clientConfig
+   */
+  public RedisAI(
+      GenericObjectPoolConfig<Jedis> poolConfig,
+      HostAndPort hostAndPort,
+      JedisClientConfig clientConfig) {
+    this(new JedisPool(poolConfig, hostAndPort, clientConfig));
   }
 
   /**
