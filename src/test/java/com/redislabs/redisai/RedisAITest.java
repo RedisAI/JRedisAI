@@ -86,7 +86,7 @@ public class RedisAITest {
       Assert.fail("Should throw JedisDataException");
     } catch (RedisAIException e) {
       Assert.assertEquals(
-          "redis.clients.jedis.exceptions.JedisDataException: ERR wrong number of arguments for 'AI.TENSORSET' command",
+          "redis.clients.jedis.exceptions.JedisDataException: ERR wrong number of values was given in 'AI.TENSORSET' command",
           e.getMessage());
     }
 
@@ -96,7 +96,7 @@ public class RedisAITest {
       Assert.fail("Should throw JedisDataException");
     } catch (RedisAIException e) {
       Assert.assertEquals(
-          "redis.clients.jedis.exceptions.JedisDataException: ERR wrong number of arguments for 'AI.TENSORSET' command",
+          "redis.clients.jedis.exceptions.JedisDataException: ERR wrong number of values was given in 'AI.TENSORSET' command",
           e.getMessage());
     }
   }
