@@ -5,6 +5,8 @@
 [![Javadocs](https://www.javadoc.io/badge/com.redislabs/jredisai.svg)](https://www.javadoc.io/doc/com.redislabs/jredisai)
 [![codecov](https://codecov.io/gh/RedisAI/JRedisAI/branch/master/graph/badge.svg?token=cC4H2TvQHs)](https://codecov.io/gh/RedisAI/JRedisAI)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/RedisAI/JRedisAI.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RedisAI/JRedisAI/context:java)
+[![Known Vulnerabilities](https://snyk.io/test/github/RedisAI/JRedisAI/badge.svg?targetFile=pom.xml)](https://snyk.io/test/github/RedisAI/JRedisAI?targetFile=pom.xml)
+
 
 # JRedisAI
 [![Forum](https://img.shields.io/badge/Forum-RedisAI-blue)](https://forum.redislabs.com/c/modules/redisai)
