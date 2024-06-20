@@ -4,7 +4,6 @@
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.redislabs/jredisai/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.redislabs/jredisai)
 [![Javadocs](https://www.javadoc.io/badge/com.redislabs/jredisai.svg)](https://www.javadoc.io/doc/com.redislabs/jredisai)
 [![codecov](https://codecov.io/gh/RedisAI/JRedisAI/branch/master/graph/badge.svg?token=cC4H2TvQHs)](https://codecov.io/gh/RedisAI/JRedisAI)
-[![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/RedisAI/JRedisAI.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RedisAI/JRedisAI/context:java)
 [![Known Vulnerabilities](https://snyk.io/test/github/RedisAI/JRedisAI/badge.svg?targetFile=pom.xml)](https://snyk.io/test/github/RedisAI/JRedisAI?targetFile=pom.xml)
 
 
@@ -54,7 +53,7 @@ and
 ```java
    RedisAI client = new RedisAI("localhost", 6379);
    client.setModel("model", Backend.TF, Device.CPU, new String[] {"a", "b"}, new String[] {"mul"}, "graph.pb");
-    
+
    client.setTensor("a", new float[] {2, 3}, new int[]{2});
    client.setTensor("b", new float[] {2, 3}, new int[]{2});
 
@@ -63,12 +62,12 @@ and
 
 ## Note
 
-**Chunk size:** Since version `0.10.0`, the chunk size of model (blob) is set to 512mb (536870912 bytes) based on 
-default Redis configuration. This behavior can be changed by `redisai.blob.chunkSize` system property at the beginning 
-of the application. For example, chunk size can be limited to 8mb by setting `-Dredisai.blob.chunkSize=8388608` or 
+**Chunk size:** Since version `0.10.0`, the chunk size of model (blob) is set to 512mb (536870912 bytes) based on
+default Redis configuration. This behavior can be changed by `redisai.blob.chunkSize` system property at the beginning
+of the application. For example, chunk size can be limited to 8mb by setting `-Dredisai.blob.chunkSize=8388608` or
 `System.setProperty(Model.BLOB_CHUNK_SIZE_PROPERTY, "8388608");`. A limit of 0 (zero) would disable chunking.
 
-**Socket timeout:** Operations with large data and/or long processing time may require a higher socket timeout. 
+**Socket timeout:** Operations with large data and/or long processing time may require a higher socket timeout.
 Following constructor may come in handy for that purpose.
 ```
   HostAndPort hostAndPort = new HostAndPort(host, port);
